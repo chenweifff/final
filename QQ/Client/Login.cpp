@@ -1,9 +1,10 @@
 #include "Login.h"
 #include "ui_Login.h"
 
-              MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-, ui(new Ui::MainWindow)
+    , ui(new Ui::MainWindow)
+    , registerDialog(nullptr)
 {
     ui->setupUi(this);
 
@@ -28,6 +29,9 @@ MainWindow::~MainWindow()
     delete ui;
     if (chatWindow) {
         delete chatWindow;
+    }
+    if (registerDialog) {
+        delete registerDialog;
     }
 }
 
@@ -69,15 +73,16 @@ void MainWindow::onLoginButtonClicked()
 
 void MainWindow::onRegisterButtonClicked()
 {
-    // 简单实现注册功能
-    QString username = ui->UsernameEdit->text().trimmed();
-    QString password = ui->PasswordEdit->text().trimmed();
+    // 创建注册对话框
+    if (!registerDialog) {
+        registerDialog = new Register(this);
 
-    if (username.isEmpty() || password.isEmpty()) {
-        QMessageBox::warning(this, "输入错误", "用户名和密码不能为空！");
-        return;
+        // 连接注册成功信号
+        connect(registerDialog, &Register::registrationSuccess, this, [this]() {
+            QMessageBox::information(this, "注册成功", "用户注册成功，请使用新账号登录！");
+        });
     }
 
-
-    QMessageBox::information(this, "注册", "注册功能需要连接到服务器实现！");
+    // 显示注册对话框
+    registerDialog->exec();
 }

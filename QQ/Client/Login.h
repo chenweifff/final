@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include "database.h"
 #include "chat.h"
+#include "register.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -27,5 +28,6 @@ private slots:
 private:
     Ui::MainWindow *ui;
     Chat *chatWindow = nullptr;
+    Register *registerDialog = nullptr;
 };
 #endif // LOGIN_H

@@ -37,7 +37,12 @@ struct qt_meta_tag_ZN8RegisterE_t {};
 
 #ifdef QT_MOC_HAS_STRINGDATA
 static constexpr auto qt_meta_stringdata_ZN8RegisterE = QtMocHelpers::stringData(
-    "Register"
+    "Register",
+    "registrationSuccess",
+    "",
+    "on_PathpushButton_clicked",
+    "on_RegisterpushButton_clicked",
+    "on_BackpushButton_clicked"
 );
 #else  // !QT_MOC_HAS_STRINGDATA
 #error "qtmochelpers.h not found or too old."
@@ -49,12 +54,28 @@ Q_CONSTINIT static const uint qt_meta_data_ZN8RegisterE[] = {
       12,       // revision
        0,       // classname
        0,    0, // classinfo
-       0,    0, // methods
+       4,   14, // methods
        0,    0, // properties
        0,    0, // enums/sets
        0,    0, // constructors
        0,       // flags
-       0,       // signalCount
+       1,       // signalCount
+
+ // signals: name, argc, parameters, tag, flags, initial metatype offsets
+       1,    0,   38,    2, 0x06,    1 /* Public */,
+
+ // slots: name, argc, parameters, tag, flags, initial metatype offsets
+       3,    0,   39,    2, 0x08,    2 /* Private */,
+       4,    0,   40,    2, 0x08,    3 /* Private */,
+       5,    0,   41,    2, 0x08,    4 /* Private */,
+
+ // signals: parameters
+    QMetaType::Void,
+
+ // slots: parameters
+    QMetaType::Void,
+    QMetaType::Void,
+    QMetaType::Void,
 
        0        // eod
 };
@@ -67,7 +88,15 @@ Q_CONSTINIT const QMetaObject Register::staticMetaObject = { {
     nullptr,
     qt_incomplete_metaTypeArray<qt_meta_tag_ZN8RegisterE_t,
         // Q_OBJECT / Q_GADGET
-        QtPrivate::TypeAndForceComplete<Register, std::true_type>
+        QtPrivate::TypeAndForceComplete<Register, std::true_type>,
+        // method 'registrationSuccess'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'on_PathpushButton_clicked'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'on_RegisterpushButton_clicked'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>,
+        // method 'on_BackpushButton_clicked'
+        QtPrivate::TypeAndForceComplete<void, std::false_type>
     >,
     nullptr
 } };
@@ -75,10 +104,25 @@ Q_CONSTINIT const QMetaObject Register::staticMetaObject = { {
 void Register::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     auto *_t = static_cast<Register *>(_o);
-    (void)_t;
-    (void)_c;
-    (void)_id;
-    (void)_a;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        switch (_id) {
+        case 0: _t->registrationSuccess(); break;
+        case 1: _t->on_PathpushButton_clicked(); break;
+        case 2: _t->on_RegisterpushButton_clicked(); break;
+        case 3: _t->on_BackpushButton_clicked(); break;
+        default: ;
+        }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        int *result = reinterpret_cast<int *>(_a[0]);
+        {
+            using _q_method_type = void (Register::*)();
+            if (_q_method_type _q_method = &Register::registrationSuccess; *reinterpret_cast<_q_method_type *>(_a[1]) == _q_method) {
+                *result = 0;
+                return;
+            }
+        }
+    }
 }
 
 const QMetaObject *Register::metaObject() const
@@ -97,6 +141,24 @@ void *Register::qt_metacast(const char *_clname)
 int Register::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
     _id = QDialog::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 4)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 4;
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 4)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 4;
+    }
     return _id;
+}
+
+// SIGNAL 0
+void Register::registrationSuccess()
+{
+    QMetaObject::activate(this, &staticMetaObject, 0, nullptr);
 }
 QT_WARNING_POP

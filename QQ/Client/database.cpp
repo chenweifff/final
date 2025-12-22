@@ -76,6 +76,47 @@ bool DatabaseManager::authenticateUser(const QString& username, const QString& p
     return false;
 }
 
+bool DatabaseManager::registerUser(const QString& username, const QString& password,
+                                   const QString& nickname, const QString& avatarPath)
+{
+    if (!m_database.isOpen()) {
+        return false;
+    }
+
+    // 检查用户名是否已存在
+    QSqlQuery checkQuery;
+    checkQuery.prepare("SELECT COUNT(*) FROM users WHERE username = :username");
+    checkQuery.bindValue(":username", username);
+
+    if (!checkQuery.exec() || !checkQuery.next()) {
+        qDebug() << "Check username failed:" << checkQuery.lastError().text();
+        return false;
+    }
+
+    if (checkQuery.value(0).toInt() > 0) {
+        qDebug() << "Username already exists";
+        return false;
+    }
+
+    // 插入新用户
+    QSqlQuery query;
+    query.prepare(
+        "INSERT INTO users (username, password, nickname, avatar_path, status, created_at) "
+        "VALUES (:username, :password, :nickname, :avatarPath, 0, datetime('now'))"
+        );
+    query.bindValue(":username", username);
+    query.bindValue(":password", password);
+    query.bindValue(":nickname", nickname);
+    query.bindValue(":avatarPath", avatarPath);
+
+    if (!query.exec()) {
+        qDebug() << "Register user failed:" << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
 QList<FriendInfo> DatabaseManager::getFriendsList(int userId)
 {
     QList<FriendInfo> friends;

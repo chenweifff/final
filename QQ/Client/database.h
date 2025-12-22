@@ -50,6 +50,10 @@ public:
     // 用户认证
     bool authenticateUser(const QString& username, const QString& password, UserInfo& userInfo);
 
+    // 用户注册
+    bool registerUser(const QString& username, const QString& password,
+                      const QString& nickname, const QString& avatarPath);
+
     // 好友操作
     QList<FriendInfo> getFriendsList(int userId);
     bool addFriend(int userId, int friendId);
