@@ -1,9 +1,9 @@
 #include "Login.h"
 #include "ui_Login.h"
 
-MainWindow::MainWindow(QWidget *parent)
+              MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+, ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -43,9 +43,7 @@ void MainWindow::onLoginButtonClicked()
 
     UserInfo userInfo;
     if (DatabaseManager::instance().authenticateUser(username, password, userInfo)) {
-        QMessageBox::information(this, "登录成功", QString("欢迎 %1！").arg(userInfo.nickname));
-
-        // 隐藏登录窗口
+        // 登录成功，隐藏登录窗口，不显示成功弹窗
         this->hide();
 
         // 创建并显示聊天窗口，传递用户信息
@@ -80,7 +78,6 @@ void MainWindow::onRegisterButtonClicked()
         return;
     }
 
-    // 在实际项目中，这里应该调用数据库的注册函数
-    // 为了简化，这里只是提示
+
     QMessageBox::information(this, "注册", "注册功能需要连接到服务器实现！");
 }

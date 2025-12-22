@@ -1,0 +1,51 @@
+-- 创建用户表
+CREATE TABLE users (
+    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(50) NOT NULL,
+    nickname VARCHAR(50) NOT NULL,
+    avatar_path VARCHAR(255),
+    status INTEGER DEFAULT 0,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建好友关系表
+CREATE TABLE friendships (
+    friendship_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id1 INTEGER NOT NULL,
+    user_id2 INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    remark_name VARCHAR(50),
+    UNIQUE(user_id1, user_id2),
+    FOREIGN KEY (user_id1) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id2) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 创建聊天消息表
+CREATE TABLE messages (
+    message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    content_type INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    file_name VARCHAR(255),
+    file_size INTEGER,
+    send_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_read INTEGER DEFAULT 0,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- 创建用户会话表
+CREATE TABLE conversations (
+    conversation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    friend_id INTEGER NOT NULL,
+    last_message_id INTEGER,
+    unread_count INTEGER DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(user_id) ON DELETE CASCADE
+);

@@ -1,0 +1,10 @@
+debug/Login.o
+debug/chat.o
+debug/database.o
+debug/main.o
+debug/register.o
+debug/qrc_images.o
+debug/moc_Login.o
+debug/moc_chat.o
+debug/moc_database.o
+debug/moc_register.o

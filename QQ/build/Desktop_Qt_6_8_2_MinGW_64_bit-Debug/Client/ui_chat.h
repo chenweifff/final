@@ -35,6 +35,7 @@ public:
     QHBoxLayout *horizontalLayout_2;
     QWidget *widget;
     QVBoxLayout *verticalLayout;
+    QLabel *usernamelabel;
     QLineEdit *searchEdit;
     QListWidget *friendListWidget;
     QWidget *widget_2;
@@ -65,6 +66,15 @@ public:
         verticalLayout = new QVBoxLayout(widget);
         verticalLayout->setObjectName("verticalLayout");
         verticalLayout->setContentsMargins(0, 0, 0, 0);
+        usernamelabel = new QLabel(widget);
+        usernamelabel->setObjectName("usernamelabel");
+        QFont font;
+        font.setPointSize(11);
+        font.setBold(true);
+        usernamelabel->setFont(font);
+
+        verticalLayout->addWidget(usernamelabel);
+
         searchEdit = new QLineEdit(widget);
         searchEdit->setObjectName("searchEdit");
 
@@ -97,10 +107,10 @@ public:
         verticalLayout_2->setObjectName("verticalLayout_2");
         friendNameLabel = new QLabel(widget_2);
         friendNameLabel->setObjectName("friendNameLabel");
-        QFont font;
-        font.setPointSize(14);
-        font.setBold(false);
-        friendNameLabel->setFont(font);
+        QFont font1;
+        font1.setPointSize(14);
+        font1.setBold(false);
+        friendNameLabel->setFont(font1);
 
         verticalLayout_2->addWidget(friendNameLabel);
 
@@ -162,8 +172,9 @@ public:
     void retranslateUi(QMainWindow *Chat)
     {
         Chat->setWindowTitle(QCoreApplication::translate("Chat", "MainWindow", nullptr));
+        usernamelabel->setText(QString());
         searchEdit->setPlaceholderText(QCoreApplication::translate("Chat", "\346\220\234\347\264\242\345\245\275\345\217\213", nullptr));
-        friendNameLabel->setText(QCoreApplication::translate("Chat", "TextLabel", nullptr));
+        friendNameLabel->setText(QString());
         sendFileButton->setText(QCoreApplication::translate("Chat", "\345\217\221\351\200\201\346\226\207\344\273\266", nullptr));
         messageEdit->setPlaceholderText(QCoreApplication::translate("Chat", "\350\257\267\350\276\223\345\205\245\346\226\207\346\234\254", nullptr));
         pushButton->setText(QCoreApplication::translate("Chat", "\345\217\221\351\200\201", nullptr));

@@ -12,16 +12,19 @@ SOURCES += \
     Login.cpp \
     chat.cpp \
     database.cpp \
-    main.cpp
+    main.cpp \
+    register.cpp
 
 HEADERS += \
     Login.h \
     chat.h \
-    database.h
+    database.h \
+    register.h
 
 FORMS += \
     Login.ui \
-    chat.ui
+    chat.ui \
+    register.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

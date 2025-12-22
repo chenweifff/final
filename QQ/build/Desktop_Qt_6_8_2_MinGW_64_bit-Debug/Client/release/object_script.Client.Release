@@ -1,0 +1,10 @@
+release/Login.o
+release/chat.o
+release/database.o
+release/main.o
+release/register.o
+release/qrc_images.o
+release/moc_Login.o
+release/moc_chat.o
+release/moc_database.o
+release/moc_register.o

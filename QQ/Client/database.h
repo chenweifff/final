@@ -44,7 +44,7 @@ class DatabaseManager : public QObject
 public:
     static DatabaseManager& instance();
 
-    bool connectToDatabase(const QString& dbPath = "chat.db");
+    bool connectToDatabase(const QString& dbPath = "E:/qt/final/QQChatDB.db");
     void closeDatabase();
 
     // 用户认证
