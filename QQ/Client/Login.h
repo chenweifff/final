@@ -3,9 +3,10 @@
 
 #include <QMainWindow>
 #include <QMessageBox>
-#include "database.h"
-#include "chat.h"
-#include "register.h"
+#include <QTcpSocket>
+#include <QHostAddress>
+#include <QTimer>
+#include "userinfo.h"  // 包含统一的UserInfo定义
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -24,10 +25,17 @@ public:
 private slots:
     void onLoginButtonClicked();
     void onRegisterButtonClicked();
+    void onSocketConnected();
+    void onSocketReadyRead();
+    void onSocketError(QAbstractSocket::SocketError error);
 
 private:
     Ui::MainWindow *ui;
-    Chat *chatWindow = nullptr;
-    Register *registerDialog = nullptr;
+    QTcpSocket *m_tcpSocket;
+    bool m_serverConnected;
+
+    void connectToServer();
+    void disconnectFromServer();
 };
+
 #endif // LOGIN_H

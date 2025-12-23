@@ -163,6 +163,7 @@ public:
 
         UsernameEdit = new QLineEdit(centralwidget);
         UsernameEdit->setObjectName("UsernameEdit");
+        UsernameEdit->setMaximumSize(QSize(140, 16777215));
 
         horizontalLayout->addWidget(UsernameEdit);
 
@@ -179,6 +180,8 @@ public:
 
         PasswordEdit = new QLineEdit(centralwidget);
         PasswordEdit->setObjectName("PasswordEdit");
+        PasswordEdit->setMinimumSize(QSize(0, 0));
+        PasswordEdit->setMaximumSize(QSize(140, 16777215));
 
         horizontalLayout_2->addWidget(PasswordEdit);
 

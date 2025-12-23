@@ -6,7 +6,7 @@
 #include <QUdpSocket>
 #include <QTcpSocket>
 #include <QTcpServer>
-#include "database.h"
+#include "userinfo.h"  // 包含完整的UserInfo定义
 
 namespace Ui {
 class Chat;
@@ -41,11 +41,10 @@ private:
     void loadFriendsList();
     void loadChatHistory(int friendId);
     void sendMessage(const QString& message);
-    void saveMessageToDatabase(int friendId, const QString& message);
 
 private:
     Ui::Chat *ui;
-    UserInfo currentUser;
+    UserInfo currentUser;  // 现在有完整类型
     int currentFriendId = -1;
     QString currentFriendName;
 
