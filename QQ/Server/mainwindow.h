@@ -54,8 +54,16 @@ private:
     void handleFriendListRequest(QTcpSocket* client, int userId);
     // 处理登出请求
     void handleLogoutRequest(QTcpSocket* client, int userId);
+    // 处理获取聊天记录请求
+    void handleMessageListRequest(QTcpSocket* client, int user1Id, int user2Id);
+    // 处理保存消息请求
+    void handleSaveMessageRequest(QTcpSocket* client, int senderId, int receiverId,
+                                  int contentType, const QString& content,
+                                  const QString& fileName = "", qint64 fileSize = 0);
     // 发送好友列表
     void sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList);
+    // 发送聊天记录
+    void sendMessageList(QTcpSocket* client, int user1Id, int user2Id, const QList<MessageInfo>& messageList);
     // 发送响应给客户端
     void sendResponse(QTcpSocket* client, const QString& response);
 };

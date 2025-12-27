@@ -58,6 +58,10 @@ private:
     void loadFriendsList(const QList<UserInfo>& friendList);
     void loadChatHistory(int friendId);
     void sendMessage(const QString& message);
+    void requestChatHistory(int friendId);
+    void displayMessage(const MessageInfo& message);
+    void addMessageToUI(const MessageInfo& message);
+    void addSystemMessage(const QString& content);
 
 private:
     Ui::Chat *ui;
@@ -73,6 +77,9 @@ private:
     QTcpSocket *m_tcpSocket = nullptr;
     QUdpSocket *udpSocket = nullptr;
     QTcpServer *tcpServer = nullptr;
+
+    // 聊天记录
+    QList<MessageInfo> chatHistory;
 
     // 文件传输相关
     QString currentFilePath;

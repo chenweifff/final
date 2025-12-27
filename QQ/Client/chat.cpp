@@ -355,24 +355,105 @@ void Chat::onFriendItemClicked(const QModelIndex &index)
     ui->friendNameLabel->setText(currentFriendName);
     qDebug() << "选中好友：" << currentFriendName << " ID:" << currentFriendId;
 
+    // 清空聊天记录缓存
+    chatHistory.clear();
+
     // 加载聊天历史
-    loadChatHistory(friendId);
+    requestChatHistory(friendId);
 }
 
-void Chat::loadChatHistory(int friendId)
+void Chat::requestChatHistory(int friendId)
 {
-    ui->messageBrowser->clear();
+    if (m_tcpSocket && m_tcpSocket->state() == QAbstractSocket::ConnectedState) {
+        QString request = QString("GET_MESSAGES|%1|%2\n")
+        .arg(currentUser.userId)
+            .arg(friendId);
+        m_tcpSocket->write(request.toUtf8());
+        m_tcpSocket->flush();
+        qDebug() << "已发送聊天记录请求：" << request.trimmed();
 
-    // TODO: 从服务器获取聊天历史
-    // 目前显示示例消息
-    QString exampleHtml = "<div style='margin: 10px;'>"
-                          "<div style='background-color: #e8f5e9; padding: 10px; border-radius: 10px; "
-                          "max-width: 70%; float: left; clear: both;'>"
-                          "<span style='color: #666; font-size: 10px;'>10:30 系统</span><br>"
-                          "开始与好友聊天"
-                          "</div></div>";
+        // 先显示系统消息
+        addSystemMessage("正在加载聊天记录...");
+    } else {
+        qDebug() << "TCP连接不可用，无法请求聊天记录";
+        addSystemMessage("网络连接异常，无法加载聊天记录");
+    }
+}
 
-    ui->messageBrowser->setHtml(exampleHtml);
+void Chat::addSystemMessage(const QString& content)
+{
+    QString timeStr = QDateTime::currentDateTime().toString("HH:mm");
+    QString messageHtml = QString("<div style='margin: 10px; text-align: center;'>"
+                                  "<span style='color: #999; font-size: 12px;'>%1 系统消息: %2</span>"
+                                  "</div>")
+                              .arg(timeStr, content);
+
+    QString currentHtml = ui->messageBrowser->toHtml();
+    ui->messageBrowser->setHtml(currentHtml + messageHtml);
+}
+
+void Chat::addMessageToUI(const MessageInfo& message)
+{
+    // 检查是否已经在聊天记录中
+    for (const auto& msg : chatHistory) {
+        if (msg.messageId == message.messageId) {
+            return; // 消息已存在，不重复添加
+        }
+    }
+
+    // 添加到聊天记录
+    chatHistory.append(message);
+
+    // 显示消息
+    displayMessage(message);
+}
+
+void Chat::displayMessage(const MessageInfo& message)
+{
+    bool isMyMessage = (message.senderId == currentUser.userId);
+    QString displayName = isMyMessage ? "我" : currentFriendName;
+
+    // 解析时间，格式为 HH:mm
+    QString timeStr = message.sendTime;
+    QDateTime sendTime = QDateTime::fromString(message.sendTime, "yyyy-MM-dd HH:mm:ss");
+    if (sendTime.isValid()) {
+        timeStr = sendTime.toString("HH:mm");
+    }
+
+    // 设置气泡样式
+    QString bubbleStyle;
+    if (isMyMessage) {
+        // 自己的消息：绿色背景，靠右显示
+        bubbleStyle = "background-color: #dcf8c6; padding: 10px; border-radius: 10px;"
+                      "max-width: 70%; float: right; clear: both; margin: 5px 0;";
+    } else {
+        // 对方的消息：白色背景，靠左显示
+        bubbleStyle = "background-color: white; padding: 10px; border-radius: 10px;"
+                      "border: 1px solid #e0e0e0; max-width: 70%; float: left; clear: both; margin: 5px 0;";
+    }
+
+    QString messageHtml;
+
+    if (message.contentType == 1) { // 文本消息
+        messageHtml = QString("<div style='margin: 10px;'>"
+                              "<div style='%1'>"
+                              "<span style='color: #666; font-size: 10px;'>%2 %3</span><br>"
+                              "<span style='color: #000;'>%4</span>"
+                              "</div></div>")
+                          .arg(bubbleStyle, timeStr, displayName, message.content);
+    } else if (message.contentType == 2) { // 文件消息
+        QString fileInfo = QString("%1 (%2 KB)").arg(message.fileName)
+                               .arg(QString::number(message.fileSize / 1024.0, 'f', 1));
+        messageHtml = QString("<div style='margin: 10px;'>"
+                              "<div style='%1'>"
+                              "<span style='color: #666; font-size: 10px;'>%2 %3</span><br>"
+                              "<span style='color: #0066cc;'><b>📎 文件:</b> %4</span>"
+                              "</div></div>")
+                          .arg(bubbleStyle, timeStr, displayName, fileInfo);
+    }
+
+    QString currentHtml = ui->messageBrowser->toHtml();
+    ui->messageBrowser->setHtml(currentHtml + messageHtml);
 
     // 滚动到底部
     QTimer::singleShot(100, this, [this]() {
@@ -399,26 +480,19 @@ void Chat::onSendButtonClicked()
     // 发送消息（通过UDP）
     sendMessage(message);
 
-    // 显示到聊天框
-    QString timeStr = QDateTime::currentDateTime().toString("HH:mm");
-    QString messageHtml = QString("<div style='margin: 10px;'>"
-                                  "<div style='background-color: #dcf8c6; padding: 10px; border-radius: 10px; "
-                                  "max-width: 70%%; float: right; clear: both;'>"
-                                  "<span style='color: #666; font-size: 10px;'>%1 我</span><br>"
-                                  "%2"
-                                  "</div></div>")
-                              .arg(timeStr, message);
+    // 创建消息对象
+    MessageInfo newMessage;
+    newMessage.senderId = currentUser.userId;
+    newMessage.receiverId = currentFriendId;
+    newMessage.content = message;
+    newMessage.contentType = 1; // 文本消息
+    newMessage.sendTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
 
-    QString currentHtml = ui->messageBrowser->toHtml();
-    ui->messageBrowser->setHtml(currentHtml + messageHtml);
+    // 添加到聊天记录并显示
+    addMessageToUI(newMessage);
+
+    // 清空输入框
     ui->messageEdit->clear();
-
-    // 滚动到底部
-    QTimer::singleShot(100, this, [this]() {
-        ui->messageBrowser->verticalScrollBar()->setValue(
-            ui->messageBrowser->verticalScrollBar()->maximum()
-            );
-    });
 }
 
 void Chat::sendMessage(const QString& message)
@@ -441,6 +515,16 @@ void Chat::sendMessage(const QString& message)
     // 发送到服务器（假设服务器在localhost:12346）
     udpSocket->writeDatagram(datagram, QHostAddress::LocalHost, 12346);
     qDebug() << "发送消息：" << msgData;
+
+    // 同时通过TCP发送到服务器保存到数据库
+    if (m_tcpSocket && m_tcpSocket->state() == QAbstractSocket::ConnectedState) {
+        QString saveRequest = QString("SAVE_MESSAGE|%1|%2|1|%3\n")
+        .arg(currentUser.userId)
+            .arg(currentFriendId)
+            .arg(message);
+        m_tcpSocket->write(saveRequest.toUtf8());
+        m_tcpSocket->flush();
+    }
 }
 
 void Chat::onSendFileButtonClicked()
@@ -449,7 +533,36 @@ void Chat::onSendFileButtonClicked()
 
     if (filePath.isEmpty()) return;
 
-    QMessageBox::information(this, "提示", QString("已选择文件：%1\n文件发送功能需要在服务器端实现").arg(filePath));
+    QFileInfo fileInfo(filePath);
+    QString fileName = fileInfo.fileName();
+    qint64 fileSize = fileInfo.size();
+
+    // 创建文件消息
+    MessageInfo fileMessage;
+    fileMessage.senderId = currentUser.userId;
+    fileMessage.receiverId = currentFriendId;
+    fileMessage.content = QString("文件: %1").arg(fileName);
+    fileMessage.contentType = 2; // 文件消息
+    fileMessage.fileName = fileName;
+    fileMessage.fileSize = fileSize;
+    fileMessage.sendTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+
+    // 添加到聊天记录并显示
+    addMessageToUI(fileMessage);
+
+    // 通过TCP发送文件消息到服务器保存
+    if (m_tcpSocket && m_tcpSocket->state() == QAbstractSocket::ConnectedState) {
+        QString saveRequest = QString("SAVE_MESSAGE|%1|%2|2|%3|%4|%5\n")
+        .arg(currentUser.userId)
+            .arg(currentFriendId)
+            .arg(fileName)
+            .arg(fileSize)
+            .arg(filePath);
+        m_tcpSocket->write(saveRequest.toUtf8());
+        m_tcpSocket->flush();
+    }
+
+    QMessageBox::information(this, "提示", QString("已选择文件：%1").arg(filePath));
 }
 
 void Chat::onReadyRead()
@@ -459,21 +572,29 @@ void Chat::onReadyRead()
         datagram.resize(udpSocket->pendingDatagramSize());
         udpSocket->readDatagram(datagram.data(), datagram.size());
 
-        // TODO: 处理接收到的消息
-        qDebug() << "收到UDP消息：" << datagram;
+        // 解析UDP消息格式：senderId|receiverId|message
+        QString msgData = QString::fromUtf8(datagram);
+        QStringList parts = msgData.split("|");
 
-        // 显示消息到聊天框
-        QString timeStr = QDateTime::currentDateTime().toString("HH:mm");
-        QString messageHtml = QString("<div style='margin: 10px;'>"
-                                      "<div style='background-color: #e8f5e9; padding: 10px; border-radius: 10px; "
-                                      "max-width: 70%%; float: left; clear: both;'>"
-                                      "<span style='color: #666; font-size: 10px;'>%1 好友</span><br>"
-                                      "%2"
-                                      "</div></div>")
-                                  .arg(timeStr, QString::fromUtf8(datagram));
+        if (parts.size() >= 3) {
+            int senderId = parts[0].toInt();
+            int receiverId = parts[1].toInt();
+            QString message = parts[2];
 
-        QString currentHtml = ui->messageBrowser->toHtml();
-        ui->messageBrowser->setHtml(currentHtml + messageHtml);
+            // 如果当前显示的是发送者的聊天窗口，则显示消息
+            if (currentFriendId == senderId || (currentFriendId == receiverId && receiverId == currentUser.userId)) {
+                // 创建消息对象
+                MessageInfo newMessage;
+                newMessage.senderId = senderId;
+                newMessage.receiverId = receiverId;
+                newMessage.content = message;
+                newMessage.contentType = 1; // 文本消息
+                newMessage.sendTime = QDateTime::currentDateTime().toString("yyyy-MM-dd HH:mm:ss");
+
+                // 添加到聊天记录并显示
+                addMessageToUI(newMessage);
+            }
+        }
     }
 }
 
@@ -532,6 +653,44 @@ void Chat::onSocketReadyRead()
                 loadFriendsList(friendList);
             } else if (command == "LOGOUT_SUCCESS") {
                 qDebug() << "登出成功";
+            } else if (command == "MESSAGES_LIST") {
+                // 处理聊天记录响应
+                int messageCount = parts[1].toInt();
+                qDebug() << "收到聊天记录，数量：" << messageCount;
+
+                // 清空当前显示
+                ui->messageBrowser->clear();
+
+                if (messageCount == 0) {
+                    addSystemMessage("暂无聊天记录");
+                    return;
+                }
+
+                int index = 2;
+                for (int i = 0; i < messageCount; i++) {
+                    if (index + 6 < parts.size()) {  // 确保有足够的数据
+                        MessageInfo message;
+                        message.messageId = parts[index++].toInt();
+                        message.senderId = parts[index++].toInt();
+                        message.receiverId = parts[index++].toInt();
+                        message.contentType = parts[index++].toInt();
+                        message.content = parts[index++];
+                        message.fileName = parts[index++];
+                        message.fileSize = parts[index++].toLongLong();
+                        message.sendTime = parts[index++];
+
+                        // 添加到聊天记录并显示
+                        addMessageToUI(message);
+                        qDebug() << "解析消息：" << message.content;
+                    } else {
+                        qDebug() << "数据不完整，跳过剩余消息";
+                        break;
+                    }
+                }
+
+                addSystemMessage("聊天记录加载完成");
+            } else if (command == "MESSAGE_SAVED") {
+                qDebug() << "消息保存成功";
             } else {
                 qDebug() << "未知命令：" << command;
             }

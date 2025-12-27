@@ -35,6 +35,14 @@ public:
     // 更新用户状态
     bool updateUserStatus(int userId, int status);
 
+    // 获取聊天记录
+    QList<MessageInfo> getMessageList(int user1Id, int user2Id);
+
+    // 保存消息
+    bool saveMessage(int senderId, int receiverId, int contentType,
+                     const QString& content, const QString& fileName = "",
+                     qint64 fileSize = 0);
+
 private:
     DatabaseManager(QObject* parent = nullptr);
     ~DatabaseManager();

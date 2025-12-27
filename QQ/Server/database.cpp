@@ -164,7 +164,6 @@ QList<UserInfo> DatabaseManager::getFriendList(int userId)
     return friendList;
 }
 
-// 添加新函数：用户退出时更新状态
 bool DatabaseManager::updateUserStatus(int userId, int status)
 {
     if (!m_database.isOpen()) {
@@ -178,6 +177,79 @@ bool DatabaseManager::updateUserStatus(int userId, int status)
 
     if (!query.exec()) {
         qDebug() << "Update user status failed:" << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+QList<MessageInfo> DatabaseManager::getMessageList(int user1Id, int user2Id)
+{
+    QList<MessageInfo> messageList;
+
+    if (!m_database.isOpen()) {
+        qDebug() << "Database is not open";
+        return messageList;
+    }
+
+    QSqlQuery query;
+    query.prepare(
+        "SELECT message_id, sender_id, receiver_id, content_type, content, file_name, file_size, "
+        "strftime('%Y-%m-%d %H:%M:%S', send_time) as send_time "
+        "FROM messages "
+        "WHERE (sender_id = :user1Id AND receiver_id = :user2Id) "
+        "OR (sender_id = :user2Id AND receiver_id = :user1Id) "
+        "ORDER BY send_time ASC"
+        );
+    query.bindValue(":user1Id", user1Id);
+    query.bindValue(":user2Id", user2Id);
+
+    if (!query.exec()) {
+        qDebug() << "Get message list failed:" << query.lastError().text();
+        return messageList;
+    }
+
+    qDebug() << "Found messages between user" << user1Id << "and user" << user2Id << ":";
+    while (query.next()) {
+        MessageInfo message;
+        message.messageId = query.value(0).toInt();
+        message.senderId = query.value(1).toInt();
+        message.receiverId = query.value(2).toInt();
+        message.contentType = query.value(3).toInt();
+        message.content = query.value(4).toString();
+        message.fileName = query.value(5).toString();
+        message.fileSize = query.value(6).toLongLong();
+        message.sendTime = query.value(7).toString();
+        messageList.append(message);
+
+        qDebug() << "Message:" << message.content << "From:" << message.senderId << "To:" << message.receiverId;
+    }
+
+    return messageList;
+}
+
+bool DatabaseManager::saveMessage(int senderId, int receiverId, int contentType,
+                                  const QString& content, const QString& fileName,
+                                  qint64 fileSize)
+{
+    if (!m_database.isOpen()) {
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare(
+        "INSERT INTO messages (sender_id, receiver_id, content_type, content, file_name, file_size, send_time) "
+        "VALUES (:senderId, :receiverId, :contentType, :content, :fileName, :fileSize, datetime('now'))"
+        );
+    query.bindValue(":senderId", senderId);
+    query.bindValue(":receiverId", receiverId);
+    query.bindValue(":contentType", contentType);
+    query.bindValue(":content", content);
+    query.bindValue(":fileName", fileName);
+    query.bindValue(":fileSize", fileSize);
+
+    if (!query.exec()) {
+        qDebug() << "Save message failed:" << query.lastError().text();
         return false;
     }
 

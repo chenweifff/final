@@ -114,6 +114,32 @@ void ChatServer::onReadyRead()
         } else if (command == "LOGOUT" && parts.size() == 2) {
             int userId = parts[1].toInt();
             handleLogoutRequest(client, userId);
+        } else if (command == "GET_MESSAGES" && parts.size() == 3) {
+            int user1Id = parts[1].toInt();
+            int user2Id = parts[2].toInt();
+            emit logMessage(QString("收到聊天记录请求: 用户1=%1, 用户2=%2").arg(user1Id).arg(user2Id));
+            handleMessageListRequest(client, user1Id, user2Id);
+        } else if (command == "SAVE_MESSAGE" && parts.size() >= 4) {
+            int senderId = parts[1].toInt();
+            int receiverId = parts[2].toInt();
+            int contentType = parts[3].toInt();
+
+            if (contentType == 1 && parts.size() >= 5) {
+                // 文本消息
+                QString content = parts[4];
+                emit logMessage(QString("收到保存消息请求: 发送者=%1, 接收者=%2, 内容=%3")
+                                    .arg(senderId).arg(receiverId).arg(content));
+                handleSaveMessageRequest(client, senderId, receiverId, contentType, content);
+            } else if (contentType == 2 && parts.size() >= 7) {
+                // 文件消息
+                QString fileName = parts[4];
+                qint64 fileSize = parts[5].toLongLong();
+                QString filePath = parts[6];
+                QString content = QString("文件: %1").arg(fileName);
+                emit logMessage(QString("收到保存文件消息请求: 发送者=%1, 接收者=%2, 文件名=%3")
+                                    .arg(senderId).arg(receiverId).arg(fileName));
+                handleSaveMessageRequest(client, senderId, receiverId, contentType, content, fileName, fileSize);
+            }
         }
     }
 }
@@ -198,6 +224,38 @@ void ChatServer::handleLogoutRequest(QTcpSocket* client, int userId)
     sendResponse(client, "LOGOUT_SUCCESS");
 }
 
+void ChatServer::handleMessageListRequest(QTcpSocket* client, int user1Id, int user2Id)
+{
+    if (!m_dbManager) {
+        sendResponse(client, "MESSAGES_LIST|0|数据库未连接");
+        return;
+    }
+
+    QList<MessageInfo> messageList = m_dbManager->getMessageList(user1Id, user2Id);
+    emit logMessage(QString("为用户ID=%1和%2查询聊天记录，找到%3条消息")
+                        .arg(user1Id).arg(user2Id).arg(messageList.size()));
+
+    sendMessageList(client, user1Id, user2Id, messageList);
+}
+
+void ChatServer::handleSaveMessageRequest(QTcpSocket* client, int senderId, int receiverId,
+                                          int contentType, const QString& content,
+                                          const QString& fileName, qint64 fileSize)
+{
+    if (!m_dbManager) {
+        sendResponse(client, "MESSAGE_SAVED|FAIL|数据库未连接");
+        return;
+    }
+
+    if (m_dbManager->saveMessage(senderId, receiverId, contentType, content, fileName, fileSize)) {
+        sendResponse(client, "MESSAGE_SAVED|SUCCESS");
+        emit logMessage(QString("消息保存成功: 发送者=%1, 接收者=%2").arg(senderId).arg(receiverId));
+    } else {
+        sendResponse(client, "MESSAGE_SAVED|FAIL|保存失败");
+        emit logMessage(QString("消息保存失败: 发送者=%1, 接收者=%2").arg(senderId).arg(receiverId));
+    }
+}
+
 void ChatServer::sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList)
 {
     QString response = QString("FRIEND_LIST|%1").arg(friendList.size());
@@ -213,6 +271,26 @@ void ChatServer::sendFriendList(QTcpSocket* client, int userId, const QList<User
 
     sendResponse(client, response);
     emit logMessage(QString("已向用户ID=%1发送好友列表，共%2个好友").arg(userId).arg(friendList.size()));
+}
+
+void ChatServer::sendMessageList(QTcpSocket* client, int user1Id, int user2Id, const QList<MessageInfo>& messageList)
+{
+    QString response = QString("MESSAGES_LIST|%1").arg(messageList.size());
+
+    for (const MessageInfo& message : messageList) {
+        response += QString("|%1|%2|%3|%4|%5|%6|%7|%8")
+        .arg(message.messageId)
+            .arg(message.senderId)
+            .arg(message.receiverId)
+            .arg(message.contentType)
+            .arg(message.content)
+            .arg(message.fileName)
+            .arg(message.fileSize)
+            .arg(message.sendTime);
+    }
+
+    sendResponse(client, response);
+    emit logMessage(QString("已向用户ID=%1发送聊天记录，共%2条消息").arg(user1Id).arg(messageList.size()));
 }
 
 void ChatServer::sendResponse(QTcpSocket* client, const QString& response)
