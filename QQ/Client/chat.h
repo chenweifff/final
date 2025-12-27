@@ -9,6 +9,8 @@
 #include <QStandardItemModel>
 #include <QStyledItemDelegate>
 #include <QPainter>
+#include <QFile>
+#include <QTextStream>
 #include "userinfo.h"
 
 namespace Ui {
@@ -56,12 +58,12 @@ private slots:
 private:
     void setupNetwork();
     void loadFriendsList(const QList<UserInfo>& friendList);
-    void loadChatHistory(int friendId);
     void sendMessage(const QString& message);
     void requestChatHistory(int friendId);
     void displayMessage(const MessageInfo& message);
     void addMessageToUI(const MessageInfo& message);
     void addSystemMessage(const QString& content);
+    void loadCSSStyles();  // 新增：加载CSS样式
 
 private:
     Ui::Chat *ui;
@@ -80,12 +82,6 @@ private:
 
     // 聊天记录
     QList<MessageInfo> chatHistory;
-
-    // 文件传输相关
-    QString currentFilePath;
-    qint64 fileTotalBytes = 0;
-    qint64 bytesWritten = 0;
-    QByteArray outBlock;
 };
 
 #endif // CHAT_H

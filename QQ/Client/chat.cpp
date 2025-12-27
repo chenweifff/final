@@ -14,6 +14,7 @@
 #include <QStyle>
 #include <QPainterPath>
 #include <QTimer>
+#include <QTextDocument>
 
 // FriendItemDelegate 实现
 FriendItemDelegate::FriendItemDelegate(QObject *parent)
@@ -167,6 +168,9 @@ Chat::Chat(QWidget *parent)
     ui->menu->addAction(logoutAction);
     connect(logoutAction, &QAction::triggered, this, &Chat::onMenuTriggered);
 
+    // 加载CSS样式
+    loadCSSStyles();
+
     // 初始化网络
     setupNetwork();
 }
@@ -180,6 +184,40 @@ Chat::~Chat()
         m_tcpSocket->deleteLater();
     }
     if (tcpServer) tcpServer->deleteLater();
+}
+
+void Chat::loadCSSStyles()
+{
+    // 尝试从资源文件加载CSS
+    QFile cssFile("E:/qt/final/QQ/css/chat.css");
+
+    if (cssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QString styleSheet = QString::fromUtf8(cssFile.readAll());
+
+        // 应用到messageBrowser
+        QTextDocument *doc = ui->messageBrowser->document();
+        doc->setDefaultStyleSheet(styleSheet);
+
+        // 设置消息浏览器的背景色
+        ui->messageBrowser->setStyleSheet("QTextBrowser { background-color: #f5f5f5; }");
+
+        cssFile.close();
+        qDebug() << "CSS样式加载成功";
+    } else {
+        qDebug() << "无法加载CSS文件，使用默认样式";
+        // 使用内联样式作为后备
+        QString defaultStyle =
+            ".system-message { color: #999; font-size: 12px; text-align: center; margin: 10px; }"
+            ".my-message-bubble { background-color: #dcf8c6; padding: 12px 15px; border-radius: 18px; max-width: 70%; margin: 8px 0; float: right; clear: both; word-wrap: break-word; }"
+            ".other-message-bubble { background-color: white; padding: 12px 15px; border-radius: 18px; max-width: 70%; margin: 8px 0; float: left; clear: both; border: 1px solid #e0e0e0; word-wrap: break-word; }"
+            ".message-container { margin: 10px; overflow: hidden; }"
+            ".message-meta { color: #666; font-size: 10px; margin-bottom: 5px; }"
+            ".message-content { color: #000; font-size: 14px; line-height: 1.4; }"
+            ".file-message { color: #0066cc; font-weight: bold; }";
+
+        ui->messageBrowser->document()->setDefaultStyleSheet(defaultStyle);
+        ui->messageBrowser->setStyleSheet("QTextBrowser { background-color: #f5f5f5; }");
+    }
 }
 
 void Chat::setCurrentUser(const UserInfo& userInfo)
@@ -383,8 +421,10 @@ void Chat::requestChatHistory(int friendId)
 void Chat::addSystemMessage(const QString& content)
 {
     QString timeStr = QDateTime::currentDateTime().toString("HH:mm");
-    QString messageHtml = QString("<div style='margin: 10px; text-align: center;'>"
-                                  "<span style='color: #999; font-size: 12px;'>%1 系统消息: %2</span>"
+
+    // 使用CSS类来设置系统消息样式
+    QString messageHtml = QString("<div class='system-message'>"
+                                  "%1 系统消息: %2"
                                   "</div>")
                               .arg(timeStr, content);
 
@@ -420,36 +460,31 @@ void Chat::displayMessage(const MessageInfo& message)
         timeStr = sendTime.toString("HH:mm");
     }
 
-    // 设置气泡样式
-    QString bubbleStyle;
-    if (isMyMessage) {
-        // 自己的消息：绿色背景，靠右显示
-        bubbleStyle = "background-color: #dcf8c6; padding: 10px; border-radius: 10px;"
-                      "max-width: 70%; float: right; clear: both; margin: 5px 0;";
-    } else {
-        // 对方的消息：白色背景，靠左显示
-        bubbleStyle = "background-color: white; padding: 10px; border-radius: 10px;"
-                      "border: 1px solid #e0e0e0; max-width: 70%; float: left; clear: both; margin: 5px 0;";
-    }
-
     QString messageHtml;
+    QString bubbleClass = isMyMessage ? "my-message-bubble" : "other-message-bubble";
 
     if (message.contentType == 1) { // 文本消息
-        messageHtml = QString("<div style='margin: 10px;'>"
-                              "<div style='%1'>"
-                              "<span style='color: #666; font-size: 10px;'>%2 %3</span><br>"
-                              "<span style='color: #000;'>%4</span>"
-                              "</div></div>")
-                          .arg(bubbleStyle, timeStr, displayName, message.content);
+        // 使用CSS类来控制样式，让浏览器自动处理换行和宽度
+        messageHtml = QString("<div class='message-container'>"
+                              "<div class='%1'>"
+                              "<span class='message-meta'>%2 %3</span>"
+                              "<span class='message-content'>%4</span>"
+                              "</div>"
+                              "</div>")
+                          .arg(bubbleClass, timeStr, displayName,
+                               message.content.toHtmlEscaped().replace("\n", "<br>"));
     } else if (message.contentType == 2) { // 文件消息
         QString fileInfo = QString("%1 (%2 KB)").arg(message.fileName)
                                .arg(QString::number(message.fileSize / 1024.0, 'f', 1));
-        messageHtml = QString("<div style='margin: 10px;'>"
-                              "<div style='%1'>"
-                              "<span style='color: #666; font-size: 10px;'>%2 %3</span><br>"
-                              "<span style='color: #0066cc;'><b>📎 文件:</b> %4</span>"
-                              "</div></div>")
-                          .arg(bubbleStyle, timeStr, displayName, fileInfo);
+        messageHtml = QString("<div class='message-container'>"
+                              "<div class='%1'>"
+                              "<span class='message-meta'>%2 %3</span>"
+                              "<span class='message-content file-message'>"
+                              "📎 文件: %4"
+                              "</span>"
+                              "</div>"
+                              "</div>")
+                          .arg(bubbleClass, timeStr, displayName, fileInfo);
     }
 
     QString currentHtml = ui->messageBrowser->toHtml();
@@ -457,9 +492,8 @@ void Chat::displayMessage(const MessageInfo& message)
 
     // 滚动到底部
     QTimer::singleShot(100, this, [this]() {
-        ui->messageBrowser->verticalScrollBar()->setValue(
-            ui->messageBrowser->verticalScrollBar()->maximum()
-            );
+        QScrollBar *scrollBar = ui->messageBrowser->verticalScrollBar();
+        scrollBar->setValue(scrollBar->maximum());
     });
 }
 

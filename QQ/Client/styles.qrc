@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/styles">
+        <file>E:/qt/final/QQ/css/chat.css</file>
+    </qresource>
+</RCC>
