@@ -6,7 +6,7 @@
 #include <QTcpSocket>
 #include <QList>
 #include "database.h"
-#include "userinfo.h"  // 包含统一的UserInfo定义
+#include "userinfo.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -50,6 +50,12 @@ private:
     // 处理注册请求
     void handleRegisterRequest(QTcpSocket* client, const QString& username, const QString& password,
                                const QString& nickname, const QString& avatarPath);
+    // 处理好友列表请求
+    void handleFriendListRequest(QTcpSocket* client, int userId);
+    // 处理登出请求
+    void handleLogoutRequest(QTcpSocket* client, int userId);
+    // 发送好友列表
+    void sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList);
     // 发送响应给客户端
     void sendResponse(QTcpSocket* client, const QString& response);
 };
@@ -75,4 +81,5 @@ private:
     ChatServer *m_chatServer;
     DatabaseManager* m_dbManager;
 };
+
 #endif // MAINWINDOW_H

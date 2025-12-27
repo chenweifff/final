@@ -460,6 +460,7 @@ debug/moc_database.cpp: ../../../Server/database.h \
 		C:/Qt/6.8.2/mingw_64/include/QtSql/qsqlerror.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QDebug \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QList \
 		../../../Server/userinfo.h \
 		debug/moc_predefs.h \
 		C:/Qt/6.8.2/mingw_64/bin/moc.exe
@@ -1088,6 +1089,7 @@ debug/database.o: ../../../Server/database.cpp ../../../Server/database.h \
 		C:/Qt/6.8.2/mingw_64/include/QtSql/qsqlerror.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QDebug \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QList \
 		../../../Server/userinfo.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o debug\database.o ..\..\..\Server\database.cpp
 

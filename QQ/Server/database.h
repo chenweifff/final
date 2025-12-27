@@ -7,6 +7,7 @@
 #include <QSqlError>
 #include <QDebug>
 #include <QString>
+#include <QList>
 
 // 使用统一的UserInfo定义
 #include "userinfo.h"
@@ -24,9 +25,15 @@ public:
     // 用户认证
     bool authenticateUser(const QString& username, const QString& password, UserInfo& userInfo);
 
-    // 用户注册（服务器端暂时不需要，可以留着）
+    // 用户注册
     bool registerUser(const QString& username, const QString& password,
                       const QString& nickname, const QString& avatarPath);
+
+    // 获取好友列表
+    QList<UserInfo> getFriendList(int userId);
+
+    // 更新用户状态
+    bool updateUserStatus(int userId, int status);
 
 private:
     DatabaseManager(QObject* parent = nullptr);

@@ -15,7 +15,7 @@
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtWidgets/QLineEdit>
-#include <QtWidgets/QListWidget>
+#include <QtWidgets/QListView>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMenuBar>
@@ -37,7 +37,7 @@ public:
     QVBoxLayout *verticalLayout;
     QLabel *usernamelabel;
     QLineEdit *searchEdit;
-    QListWidget *friendListWidget;
+    QListView *friendListView;
     QWidget *widget_2;
     QVBoxLayout *verticalLayout_2;
     QLabel *friendNameLabel;
@@ -80,9 +80,9 @@ public:
 
         verticalLayout->addWidget(searchEdit);
 
-        friendListWidget = new QListWidget(widget);
-        friendListWidget->setObjectName("friendListWidget");
-        friendListWidget->setStyleSheet(QString::fromUtf8("QListWidget {\n"
+        friendListView = new QListView(widget);
+        friendListView->setObjectName("friendListView");
+        friendListView->setStyleSheet(QString::fromUtf8("QListWidget {\n"
 "    background-color: white;\n"
 "    border: none;\n"
 "}\n"
@@ -96,7 +96,7 @@ public:
 "    background-color: #cce5ff;\n"
 "}"));
 
-        verticalLayout->addWidget(friendListWidget);
+        verticalLayout->addWidget(friendListView);
 
 
         horizontalLayout_2->addWidget(widget);

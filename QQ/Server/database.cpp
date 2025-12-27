@@ -64,11 +64,13 @@ bool DatabaseManager::authenticateUser(const QString& username, const QString& p
         userInfo.avatarPath = query.value(3).toString();
         userInfo.status = query.value(4).toInt();
 
-        // 更新最后登录时间
+        // 更新最后登录时间和状态
         QSqlQuery updateQuery;
         updateQuery.prepare("UPDATE users SET last_login = datetime('now'), status = 1 WHERE user_id = :userId");
         updateQuery.bindValue(":userId", userInfo.userId);
-        updateQuery.exec();
+        if (!updateQuery.exec()) {
+            qDebug() << "Update last_login failed:" << updateQuery.lastError().text();
+        }
 
         return true;
     }
@@ -93,7 +95,6 @@ bool DatabaseManager::registerUser(const QString& username, const QString& passw
         return false;
     }
 
-    // 修复这里：将 checkValue(0) 改为 checkQuery.value(0)
     if (checkQuery.value(0).toInt() > 0) {
         qDebug() << "Username already exists";
         return false;
@@ -112,6 +113,71 @@ bool DatabaseManager::registerUser(const QString& username, const QString& passw
 
     if (!query.exec()) {
         qDebug() << "Register user failed:" << query.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+QList<UserInfo> DatabaseManager::getFriendList(int userId)
+{
+    QList<UserInfo> friendList;
+
+    if (!m_database.isOpen()) {
+        qDebug() << "Database is not open";
+        return friendList;
+    }
+
+    // 修复的好友查询逻辑：查找所有与该用户是好友关系的用户
+    QSqlQuery query;
+    query.prepare(
+        "SELECT DISTINCT "
+        "CASE WHEN f.user_id1 = :userId THEN f.user_id2 ELSE f.user_id1 END as friend_id, "
+        "u.username, u.nickname, u.avatar_path, u.status "
+        "FROM friendships f "
+        "JOIN users u ON (u.user_id = CASE WHEN f.user_id1 = :userId THEN f.user_id2 ELSE f.user_id1 END) "
+        "WHERE (f.user_id1 = :userId OR f.user_id2 = :userId) "
+        "AND u.user_id != :userId "
+        "ORDER BY u.status DESC, u.nickname"
+        );
+    query.bindValue(":userId", userId);
+
+    if (!query.exec()) {
+        qDebug() << "Get friend list failed:" << query.lastError().text();
+        qDebug() << "Query:" << query.lastQuery();
+        return friendList;
+    }
+
+    qDebug() << "Found friends for user" << userId << ":";
+    while (query.next()) {
+        UserInfo friendInfo;
+        friendInfo.userId = query.value(0).toInt();
+        friendInfo.username = query.value(1).toString();
+        friendInfo.nickname = query.value(2).toString();
+        friendInfo.avatarPath = query.value(3).toString();
+        friendInfo.status = query.value(4).toInt();
+        friendList.append(friendInfo);
+
+        qDebug() << "Friend:" << friendInfo.nickname << "ID:" << friendInfo.userId << "Status:" << friendInfo.status;
+    }
+
+    return friendList;
+}
+
+// 添加新函数：用户退出时更新状态
+bool DatabaseManager::updateUserStatus(int userId, int status)
+{
+    if (!m_database.isOpen()) {
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare("UPDATE users SET status = :status WHERE user_id = :userId");
+    query.bindValue(":status", status);
+    query.bindValue(":userId", userId);
+
+    if (!query.exec()) {
+        qDebug() << "Update user status failed:" << query.lastError().text();
         return false;
     }
 

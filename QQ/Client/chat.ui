@@ -60,7 +60,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QListWidget" name="friendListWidget">
+        <widget class="QListView" name="friendListView">
          <property name="styleSheet">
           <string notr="true">QListWidget {
     background-color: white;

@@ -84,6 +84,8 @@ void ChatServer::onReadyRead()
     QByteArray data = client->readAll();
     QString message = QString::fromUtf8(data).trimmed();
 
+    emit logMessage(QString("收到客户端消息: %1").arg(message));
+
     // 解析消息格式：命令|参数1|参数2|...
     QStringList parts = message.split("|");
     if (parts.size() > 0) {
@@ -94,7 +96,6 @@ void ChatServer::onReadyRead()
             QString password = parts[2];
 
             emit logMessage(QString("收到登录请求: 用户名=%1").arg(username));
-            emit logMessage("查询数据库中...");
 
             handleLoginRequest(client, username, password);
         } else if (command == "REGISTER" && parts.size() >= 4) {
@@ -104,9 +105,15 @@ void ChatServer::onReadyRead()
             QString avatarPath = parts.size() > 4 ? parts[4] : "default_avatar.png";
 
             emit logMessage(QString("收到注册请求: 用户名=%1, 昵称=%2").arg(username).arg(nickname));
-            emit logMessage("有新用户注册中...");
 
             handleRegisterRequest(client, username, password, nickname, avatarPath);
+        } else if (command == "GET_FRIENDS" && parts.size() == 2) {
+            int userId = parts[1].toInt();
+            emit logMessage(QString("收到好友列表请求: 用户ID=%1").arg(userId));
+            handleFriendListRequest(client, userId);
+        } else if (command == "LOGOUT" && parts.size() == 2) {
+            int userId = parts[1].toInt();
+            handleLogoutRequest(client, userId);
         }
     }
 }
@@ -122,16 +129,22 @@ void ChatServer::handleLoginRequest(QTcpSocket* client, const QString& username,
     UserInfo userInfo;
     if (m_dbManager->authenticateUser(username, password, userInfo)) {
         // 登录成功
-        QString response = QString("LOGIN_SUCCESS|%1|%2|%3")
+        QString response = QString("LOGIN_SUCCESS|%1|%2|%3|%4|%5")
                                .arg(QString::number(userInfo.userId))
+                               .arg(userInfo.username)
                                .arg(userInfo.nickname)
-                               .arg(userInfo.avatarPath);
+                               .arg(userInfo.avatarPath)
+                               .arg(userInfo.status);
         sendResponse(client, response);
 
+        emit logMessage(QString("用户 '%1'(ID:%2) 登录成功").arg(userInfo.nickname).arg(userInfo.userId));
         emit userLoginSuccess(userInfo.nickname);
+
+        // 等待客户端请求好友列表（由客户端主动请求）
     } else {
         // 登录失败
         sendResponse(client, "LOGIN_FAIL|用户名或密码错误");
+        emit logMessage(QString("登录失败: 用户名=%1").arg(username));
         emit userLoginFailed();
     }
 }
@@ -151,9 +164,8 @@ void ChatServer::handleRegisterRequest(QTcpSocket* client, const QString& userna
         sendResponse(client, "REGISTER_SUCCESS");
 
         // 记录注册成功信息
-        QString successMsg = QString("用户注册成功: 用户名=%1, 密码=%2, 昵称=%3")
+        QString successMsg = QString("用户注册成功: 用户名=%1, 昵称=%2")
                                  .arg(username)
-                                 .arg(password)
                                  .arg(nickname);
         emit logMessage(successMsg);
         emit userRegisterSuccess(username, nickname);
@@ -164,12 +176,52 @@ void ChatServer::handleRegisterRequest(QTcpSocket* client, const QString& userna
     }
 }
 
+void ChatServer::handleFriendListRequest(QTcpSocket* client, int userId)
+{
+    if (!m_dbManager) {
+        sendResponse(client, "FRIEND_LIST|0|数据库未连接");
+        return;
+    }
+
+    QList<UserInfo> friendList = m_dbManager->getFriendList(userId);
+    emit logMessage(QString("为用户ID=%1查询好友列表，找到%2个好友").arg(userId).arg(friendList.size()));
+
+    sendFriendList(client, userId, friendList);
+}
+
+void ChatServer::handleLogoutRequest(QTcpSocket* client, int userId)
+{
+    if (m_dbManager) {
+        m_dbManager->updateUserStatus(userId, 0);
+        emit logMessage(QString("用户ID=%1已退出").arg(userId));
+    }
+    sendResponse(client, "LOGOUT_SUCCESS");
+}
+
+void ChatServer::sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList)
+{
+    QString response = QString("FRIEND_LIST|%1").arg(friendList.size());
+
+    for (const UserInfo& friendInfo : friendList) {
+        response += QString("|%1|%2|%3|%4|%5")
+        .arg(friendInfo.userId)
+            .arg(friendInfo.username)
+            .arg(friendInfo.nickname)
+            .arg(friendInfo.avatarPath)
+            .arg(friendInfo.status);
+    }
+
+    sendResponse(client, response);
+    emit logMessage(QString("已向用户ID=%1发送好友列表，共%2个好友").arg(userId).arg(friendList.size()));
+}
+
 void ChatServer::sendResponse(QTcpSocket* client, const QString& response)
 {
     if (client && client->state() == QAbstractSocket::ConnectedState) {
         QByteArray data = (response + "\n").toUtf8();
         client->write(data);
         client->flush();
+        emit logMessage(QString("发送响应: %1").arg(response));
     }
 }
 
@@ -230,6 +282,11 @@ void MainWindow::logMessage(const QString &msg)
 {
     QString timestamp = QDateTime::currentDateTime().toString("[HH:mm:ss] ");
     ui->logEdit->appendPlainText(timestamp + msg);
+
+    // 自动滚动到底部
+    QTextCursor cursor = ui->logEdit->textCursor();
+    cursor.movePosition(QTextCursor::End);
+    ui->logEdit->setTextCursor(cursor);
 }
 
 void MainWindow::onUserLoginSuccess(const QString &nickname)
