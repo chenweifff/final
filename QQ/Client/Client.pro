@@ -25,7 +25,5 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-
-# 添加CSS文件到资源系统
-RESOURCES += \
-    styles.qrc
+# 确保程序能找到CSS文件
+DESTDIR = $$OUT_PWD

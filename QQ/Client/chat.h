@@ -11,6 +11,8 @@
 #include <QPainter>
 #include <QFile>
 #include <QTextStream>
+#include <QMap>
+#include <QBuffer>
 #include "userinfo.h"
 
 namespace Ui {
@@ -63,7 +65,7 @@ private:
     void displayMessage(const MessageInfo& message);
     void addMessageToUI(const MessageInfo& message);
     void addSystemMessage(const QString& content);
-    void loadCSSStyles();  // 新增：加载CSS样式
+    void loadCSSStyles();
 
 private:
     Ui::Chat *ui;
@@ -82,6 +84,9 @@ private:
 
     // 聊天记录
     QList<MessageInfo> chatHistory;
+
+    // 好友映射
+    QMap<int, UserInfo> m_friendMap;
 };
 
 #endif // CHAT_H
