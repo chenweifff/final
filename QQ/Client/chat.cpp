@@ -190,167 +190,108 @@ Chat::~Chat()
 
 void Chat::loadCSSStyles()
 {
-    // CSS文件路径 - 请确保这个路径正确
     QString cssPath = "E:/qt/final/QQ/css/chat.css";
     QFile cssFile(cssPath);
 
-    if (cssFile.exists() && cssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    if (cssFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         QString styleSheet = QString::fromUtf8(cssFile.readAll());
+        // 将样式表设置为文档的默认样式
         ui->messageBrowser->document()->setDefaultStyleSheet(styleSheet);
         cssFile.close();
-        qDebug() << "CSS样式加载成功，路径：" << cssPath;
-    } else {
-        qDebug() << "无法加载CSS文件：" << cssPath;
-
-        // 创建默认CSS内容
-        QString defaultCSS =
-            "body { margin: 0; padding: 8px; background-color: #f5f5f5; font-family: 'Microsoft YaHei', '微软雅黑', sans-serif; }"
-            ".clearfix::after { content: ''; display: table; clear: both; }"
-            ".message-wrapper { margin: 8px 0; }"
-            ".my-message-wrapper { text-align: right; }"
-            ".other-message-wrapper { text-align: left; }"
-            ".message-content-wrapper { display: inline-block; max-width: 70%; position: relative; }"
-            ".my-message-wrapper .message-content-wrapper { float: right; margin-right: 8px; }"
-            ".other-message-wrapper .message-content-wrapper { float: left; margin-left: 8px; }"
-            ".avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; display: inline-block; vertical-align: top; }"
-            ".my-message-wrapper .avatar { float: right; margin-left: 8px; margin-right: 0; }"
-            ".other-message-wrapper .avatar { float: left; margin-right: 8px; margin-left: 0; }"
-            ".avatar-img { width: 100%; height: 100%; object-fit: cover; }"
-            ".default-avatar { background: linear-gradient(135deg, #95ec69 0%, #64b5f6 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }"
-            ".other-default-avatar { background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; }"
-            ".message-bubble { display: inline-block; padding: 10px 14px; border-radius: 18px; word-wrap: break-word; word-break: break-word; max-width: 100%; min-width: 40px; position: relative; }"
-            ".my-message-bubble { background-color: #95ec69; border-bottom-right-radius: 4px; text-align: left; float: left; }"
-            ".other-message-bubble { background-color: white; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px; text-align: left; float: right; }"
-            ".my-message-bubble::after { content: ''; position: absolute; top: 12px; right: -8px; width: 0; height: 0; border: 8px solid transparent; border-left-color: #95ec69; border-right: 0; }"
-            ".other-message-bubble::after { content: ''; position: absolute; top: 12px; left: -8px; width: 0; height: 0; border: 8px transparent; border-right-color: white; border-left: 0; z-index: 1; }"
-            ".other-message-bubble::before { content: ''; position: absolute; top: 11px; left: -9px; width: 0; height: 0; border: 8px transparent; border-right-color: #e0e0e0; border-left: 0; z-index: 0; }"
-            ".message-text { color: #000; font-size: 14px; line-height: 1.5; display: inline-block; white-space: pre-wrap; word-break: break-word; }"
-            ".file-message { color: #0066cc; font-weight: bold; }"
-            ".system-message { color: #999; font-size: 12px; text-align: center; margin: 15px 0; padding: 5px; clear: both; }";
-
-        ui->messageBrowser->document()->setDefaultStyleSheet(defaultCSS);
     }
 
-    // 设置消息浏览器的背景色
-    ui->messageBrowser->setStyleSheet("QTextBrowser { background-color: #f5f5f5; border: none; padding: 5px; }");
+    // 保持 QTextBrowser 的背景样式（不影响 document 内部样式）
+    ui->messageBrowser->setStyleSheet(
+        "QTextBrowser { background-color: #f5f5f5; border: none; }"
+        );
 }
 
 void Chat::displayMessage(const MessageInfo& message)
 {
-    bool isMyMessage = (message.senderId == currentUser.userId);
+    bool isMy = (message.senderId == currentUser.userId);
 
-    // 获取头像路径
-    QString avatarPath = "";
-    if (isMyMessage) {
+    /* ===== 头像 ===== */
+    QString avatarPath;
+    if (isMy) {
         avatarPath = currentUser.avatarPath;
-    } else {
-        // 从好友列表中查找头像
-        if (m_friendMap.contains(message.senderId)) {
-            avatarPath = m_friendMap[message.senderId].avatarPath;
-        }
+    } else if (m_friendMap.contains(message.senderId)) {
+        avatarPath = m_friendMap[message.senderId].avatarPath;
     }
 
-    // 构建HTML消息 - 关键修改：确保头像和气泡在同一行
-    QString messageHtml;
-    QString containerClass = isMyMessage ? "my-message-container" : "other-message-container";
-    QString bubbleClass = isMyMessage ? "my-message-bubble" : "other-message-bubble";
-
-    // 头像HTML（缩小为32x32）
     QString avatarHtml;
-    QString avatarClass = isMyMessage ? "default-avatar" : "other-default-avatar";
-
     if (!avatarPath.isEmpty() && QFile::exists(avatarPath)) {
-        // 将头像转换为Base64编码
-        QImage avatarImg(avatarPath);
-        if (!avatarImg.isNull()) {
-            avatarImg = avatarImg.scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            QByteArray byteArray;
-            QBuffer buffer(&byteArray);
-            buffer.open(QIODevice::WriteOnly);
-            avatarImg.save(&buffer, "PNG");
-            QString base64Avatar = QString::fromLatin1(byteArray.toBase64().data());
-            avatarHtml = QString("<div class='message-avatar'><img src='data:image/png;base64,%1' class='avatar-img'/></div>")
-                             .arg(base64Avatar);
-        } else {
-            // 使用默认头像
-            QString initial = isMyMessage ? currentUser.nickname.left(1).toUpper() :
-                                  (m_friendMap.contains(message.senderId) ?
-                                       m_friendMap[message.senderId].nickname.left(1).toUpper() : "友");
-            avatarHtml = QString("<div class='message-avatar %1'>%2</div>")
-                             .arg(avatarClass, initial);
-        }
+        QImage img(avatarPath);
+        img = img.scaled(36, 36, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        QByteArray bytes;
+        QBuffer buffer(&bytes);
+        buffer.open(QIODevice::WriteOnly);
+        img.save(&buffer, "PNG");
+
+        avatarHtml = QString(
+                         "<div class='avatar'>"
+                         "<img class='avatar-img' src='data:image/png;base64,%1'>"
+                         "</div>"
+                         ).arg(QString::fromLatin1(bytes.toBase64()));
     } else {
-        // 使用默认头像
-        QString initial = isMyMessage ? currentUser.nickname.left(1).toUpper() :
-                              (m_friendMap.contains(message.senderId) ?
-                                   m_friendMap[message.senderId].nickname.left(1).toUpper() : "友");
-        avatarHtml = QString("<div class='message-avatar %1'>%2</div>")
-                         .arg(avatarClass, initial);
+        QString initial = isMy
+                              ? currentUser.nickname.left(1)
+                              : m_friendMap.value(message.senderId).nickname.left(1);
+
+        avatarHtml = QString("<div class='avatar'>%1</div>").arg(initial);
     }
 
-    // 构建消息内容
-    QString contentHtml;
-    if (message.contentType == 1) { // 文本消息
-        QString escapedContent = message.content.toHtmlEscaped().replace("\n", "<br>");
-        contentHtml = QString("<div class='message-content'>%1</div>").arg(escapedContent);
-    } else if (message.contentType == 2) { // 文件消息
-        QString fileSizeStr;
-        if (message.fileSize < 1024) {
-            fileSizeStr = QString::number(message.fileSize) + " B";
-        } else if (message.fileSize < 1024 * 1024) {
-            fileSizeStr = QString::number(message.fileSize / 1024.0, 'f', 1) + " KB";
-        } else {
-            fileSizeStr = QString::number(message.fileSize / (1024.0 * 1024.0), 'f', 1) + " MB";
-        }
+    /* ===== 消息内容 ===== */
+    QString bubbleClass = isMy ? "bubble my-bubble" : "bubble other-bubble";
 
-        QString fileInfo = QString("📎 %1 (%2)").arg(message.fileName).arg(fileSizeStr);
-        contentHtml = QString("<div class='message-content file-message'>%1</div>").arg(fileInfo);
-    }
+    QString bubbleHtml = QString(
+                             "<div class='%1'>%2</div>"
+                             ).arg(
+                                 bubbleClass,
+                                 message.content.toHtmlEscaped().replace("\n", "<br>")
+                                 );
 
-    // 构建气泡
-    QString bubbleHtml = QString("<div class='message-bubble %1'>%2</div>")
-                             .arg(bubbleClass, contentHtml);
+    /* ===== 表格结构（核心） ===== */
+    QString tableHtml;
 
-    // 关键修改：确保头像和气泡包装器顺序正确
-    if (isMyMessage) {
-        // 己方消息：气泡在左，头像在右
-        messageHtml = QString("<div class='message-container %1'>"
-                              "<div class='message-bubble-wrapper'>%2</div>"
-                              "<div class='message-avatar-wrapper'>%3</div>"
-                              "</div>")
-                          .arg(containerClass, bubbleHtml, avatarHtml);
+    if (isMy) {
+        tableHtml = QString(
+                        "<table class='message-table'><tr>"
+                        "<td class='spacer'></td>"
+                        "<td class='cell'>%1</td>"
+                        "<td class='avatar-cell'>%2</td>"
+                        "</tr></table>"
+                        ).arg(bubbleHtml, avatarHtml);
     } else {
-        // 对方消息：头像在左，气泡在右
-        messageHtml = QString("<div class='message-container %1'>"
-                              "<div class='message-avatar-wrapper'>%2</div>"
-                              "<div class='message-bubble-wrapper'>%3</div>"
-                              "</div>")
-                          .arg(containerClass, avatarHtml, bubbleHtml);
+        tableHtml = QString(
+                        "<table class='message-table'><tr>"
+                        "<td class='avatar-cell'>%1</td>"
+                        "<td class='cell'>%2</td>"
+                        "<td class='spacer'></td>"
+                        "</tr></table>"
+                        ).arg(avatarHtml, bubbleHtml);
     }
 
-    // 添加到消息浏览器
-    QString currentHtml = ui->messageBrowser->toHtml();
+    QString rowClass = isMy
+                           ? "message-row my-row"
+                           : "message-row other-row";
 
-    // 如果是第一条消息，添加HTML文档基础结构
-    if (currentHtml.isEmpty() || !currentHtml.contains("<html")) {
-        currentHtml = "<html><head><style></style></head><body></body></html>";
+    QString messageHtml =
+        QString("<div class='%1'>%2</div>").arg(rowClass, tableHtml);
+
+    /* ===== 插入 ===== */
+    QString html = ui->messageBrowser->toHtml();
+    if (!html.contains("<body")) {
+        html = "<html><body></body></html>";
     }
 
-    // 在body标签结束前插入消息
-    int bodyEnd = currentHtml.lastIndexOf("</body>");
-    if (bodyEnd == -1) {
-        // 如果没有body标签，直接追加
-        currentHtml += messageHtml;
-    } else {
-        currentHtml.insert(bodyEnd, messageHtml);
-    }
+    int pos = html.lastIndexOf("</body>");
+    html.insert(pos, messageHtml);
 
-    ui->messageBrowser->setHtml(currentHtml);
+    ui->messageBrowser->setHtml(html);
 
-    // 滚动到底部
-    QTimer::singleShot(50, this, [this]() {
-        QScrollBar *scrollBar = ui->messageBrowser->verticalScrollBar();
-        scrollBar->setValue(scrollBar->maximum());
+    QTimer::singleShot(0, this, [this]() {
+        auto *bar = ui->messageBrowser->verticalScrollBar();
+        bar->setValue(bar->maximum());
     });
 }
 
