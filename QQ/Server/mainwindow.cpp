@@ -140,6 +140,12 @@ void ChatServer::onReadyRead()
                                     .arg(senderId).arg(receiverId).arg(fileName));
                 handleSaveMessageRequest(client, senderId, receiverId, contentType, content, fileName, fileSize);
             }
+        } else if (command == "SEARCH_USERS" && parts.size() == 3) {
+            // 新增：处理搜索用户请求
+            int userId = parts[1].toInt();
+            QString keyword = parts[2];
+            emit logMessage(QString("收到搜索用户请求: 用户ID=%1, 关键词=%2").arg(userId).arg(keyword));
+            handleSearchUsersRequest(client, userId, keyword);
         }
     }
 }
@@ -256,6 +262,21 @@ void ChatServer::handleSaveMessageRequest(QTcpSocket* client, int senderId, int 
     }
 }
 
+// 新增：处理搜索用户请求
+void ChatServer::handleSearchUsersRequest(QTcpSocket* client, int userId, const QString& keyword)
+{
+    if (!m_dbManager) {
+        sendResponse(client, "SEARCH_RESULTS|0|数据库未连接");
+        return;
+    }
+
+    // 修改：第三个参数设置为false，不排除好友
+    QList<UserInfo> userList = m_dbManager->searchUsers(userId, keyword, false);
+    emit logMessage(QString("为用户ID=%1搜索用户，关键词='%2'，找到%3个结果")
+                        .arg(userId).arg(keyword).arg(userList.size()));
+
+    sendSearchResults(client, userId, userList);
+}
 void ChatServer::sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList)
 {
     QString response = QString("FRIEND_LIST|%1").arg(friendList.size());
@@ -291,6 +312,24 @@ void ChatServer::sendMessageList(QTcpSocket* client, int user1Id, int user2Id, c
 
     sendResponse(client, response);
     emit logMessage(QString("已向用户ID=%1发送聊天记录，共%2条消息").arg(user1Id).arg(messageList.size()));
+}
+
+// 新增：发送搜索结果
+void ChatServer::sendSearchResults(QTcpSocket* client, int userId, const QList<UserInfo>& userList)
+{
+    QString response = QString("SEARCH_RESULTS|%1").arg(userList.size());
+
+    for (const UserInfo& userInfo : userList) {
+        response += QString("|%1|%2|%3|%4|%5")
+        .arg(userInfo.userId)
+            .arg(userInfo.username)
+            .arg(userInfo.nickname)
+            .arg(userInfo.avatarPath)
+            .arg(userInfo.status);
+    }
+
+    sendResponse(client, response);
+    emit logMessage(QString("已向用户ID=%1发送搜索结果，共%2个用户").arg(userId).arg(userList.size()));
 }
 
 void ChatServer::sendResponse(QTcpSocket* client, const QString& response)

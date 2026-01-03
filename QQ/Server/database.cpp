@@ -255,3 +255,63 @@ bool DatabaseManager::saveMessage(int senderId, int receiverId, int contentType,
 
     return true;
 }
+
+// 搜索用户函数实现
+QList<UserInfo> DatabaseManager::searchUsers(int userId, const QString& keyword, bool excludeFriends)
+{
+    QList<UserInfo> userList;
+
+    if (!m_database.isOpen()) {
+        qDebug() << "Database is not open";
+        return userList;
+    }
+
+    // 构建基础查询
+    QString sql =
+        "SELECT u.user_id, u.username, u.nickname, u.avatar_path, u.status "
+        "FROM users u "
+        "WHERE u.nickname LIKE :keyword "
+        "AND u.user_id != :userId ";
+
+    // 如果排除好友，添加排除条件
+    if (excludeFriends) {
+        sql +=
+            "AND NOT EXISTS ("
+            "    SELECT 1 FROM friendships f "
+            "    WHERE (f.user_id1 = :userId AND f.user_id2 = u.user_id) "
+            "       OR (f.user_id1 = u.user_id AND f.user_id2 = :userId)"
+            ") ";
+    }
+
+    sql += "ORDER BY u.status DESC, u.nickname";
+
+    QSqlQuery query;
+    query.prepare(sql);
+    query.bindValue(":keyword", "%" + keyword + "%");
+    query.bindValue(":userId", userId);
+
+    if (!query.exec()) {
+        qDebug() << "Search users failed:" << query.lastError().text();
+        qDebug() << "SQL:" << query.lastQuery();
+        qDebug() << "Bound values:" << query.boundValues();
+        return userList;
+    }
+
+    qDebug() << "Search results for user" << userId << "with keyword" << keyword << "(excludeFriends:" << excludeFriends << "):";
+    int count = 0;
+    while (query.next()) {
+        UserInfo userInfo;
+        userInfo.userId = query.value(0).toInt();
+        userInfo.username = query.value(1).toString();
+        userInfo.nickname = query.value(2).toString();
+        userInfo.avatarPath = query.value(3).toString();
+        userInfo.status = query.value(4).toInt();
+        userList.append(userInfo);
+        count++;
+
+        qDebug() << "User:" << userInfo.nickname << "ID:" << userInfo.userId << "Status:" << userInfo.status;
+    }
+
+    qDebug() << "Total found:" << count << "users";
+    return userList;
+}

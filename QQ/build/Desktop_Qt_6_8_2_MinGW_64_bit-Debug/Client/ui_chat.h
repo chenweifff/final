@@ -36,13 +36,14 @@ public:
     QWidget *widget;
     QVBoxLayout *verticalLayout;
     QLabel *usernamelabel;
+    QHBoxLayout *horizontalLayout_3;
     QLineEdit *searchEdit;
+    QPushButton *searchButton;
     QListView *friendListView;
     QWidget *widget_2;
     QVBoxLayout *verticalLayout_2;
     QLabel *friendNameLabel;
     QTextBrowser *messageBrowser;
-    QPushButton *sendFileButton;
     QTextEdit *messageEdit;
     QHBoxLayout *horizontalLayout;
     QSpacerItem *horizontalSpacer;
@@ -65,7 +66,6 @@ public:
         widget->setMaximumSize(QSize(130, 16777215));
         verticalLayout = new QVBoxLayout(widget);
         verticalLayout->setObjectName("verticalLayout");
-        verticalLayout->setContentsMargins(0, 0, 0, 0);
         usernamelabel = new QLabel(widget);
         usernamelabel->setObjectName("usernamelabel");
         QFont font;
@@ -75,10 +75,21 @@ public:
 
         verticalLayout->addWidget(usernamelabel);
 
+        horizontalLayout_3 = new QHBoxLayout();
+        horizontalLayout_3->setObjectName("horizontalLayout_3");
         searchEdit = new QLineEdit(widget);
         searchEdit->setObjectName("searchEdit");
 
-        verticalLayout->addWidget(searchEdit);
+        horizontalLayout_3->addWidget(searchEdit);
+
+        searchButton = new QPushButton(widget);
+        searchButton->setObjectName("searchButton");
+        searchButton->setMaximumSize(QSize(30, 16777215));
+
+        horizontalLayout_3->addWidget(searchButton);
+
+
+        verticalLayout->addLayout(horizontalLayout_3);
 
         friendListView = new QListView(widget);
         friendListView->setObjectName("friendListView");
@@ -118,12 +129,6 @@ public:
         messageBrowser->setObjectName("messageBrowser");
 
         verticalLayout_2->addWidget(messageBrowser);
-
-        sendFileButton = new QPushButton(widget_2);
-        sendFileButton->setObjectName("sendFileButton");
-        sendFileButton->setMaximumSize(QSize(60, 16777215));
-
-        verticalLayout_2->addWidget(sendFileButton);
 
         messageEdit = new QTextEdit(widget_2);
         messageEdit->setObjectName("messageEdit");
@@ -174,8 +179,8 @@ public:
         Chat->setWindowTitle(QCoreApplication::translate("Chat", "MainWindow", nullptr));
         usernamelabel->setText(QString());
         searchEdit->setPlaceholderText(QCoreApplication::translate("Chat", "\346\220\234\347\264\242\345\245\275\345\217\213", nullptr));
+        searchButton->setText(QCoreApplication::translate("Chat", "\346\220\234\347\264\242", nullptr));
         friendNameLabel->setText(QString());
-        sendFileButton->setText(QCoreApplication::translate("Chat", "\345\217\221\351\200\201\346\226\207\344\273\266", nullptr));
         messageEdit->setPlaceholderText(QCoreApplication::translate("Chat", "\350\257\267\350\276\223\345\205\245\346\226\207\346\234\254", nullptr));
         pushButton->setText(QCoreApplication::translate("Chat", "\345\217\221\351\200\201", nullptr));
         menu->setTitle(QCoreApplication::translate("Chat", "\351\200\200\345\207\272\347\231\273\345\275\225", nullptr));

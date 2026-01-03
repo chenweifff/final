@@ -60,10 +60,15 @@ private:
     void handleSaveMessageRequest(QTcpSocket* client, int senderId, int receiverId,
                                   int contentType, const QString& content,
                                   const QString& fileName = "", qint64 fileSize = 0);
+    // 处理搜索用户请求（新增）
+    void handleSearchUsersRequest(QTcpSocket* client, int userId, const QString& keyword);
+
     // 发送好友列表
     void sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList);
     // 发送聊天记录
     void sendMessageList(QTcpSocket* client, int user1Id, int user2Id, const QList<MessageInfo>& messageList);
+    // 发送搜索结果（新增）
+    void sendSearchResults(QTcpSocket* client, int userId, const QList<UserInfo>& userList);
     // 发送响应给客户端
     void sendResponse(QTcpSocket* client, const QString& response);
 };

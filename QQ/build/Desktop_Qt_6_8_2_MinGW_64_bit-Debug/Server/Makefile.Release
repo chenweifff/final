@@ -329,6 +329,9 @@ release/moc_mainwindow.cpp: ../../../Server/mainwindow.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QDebug \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
 		../../../Server/userinfo.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QDateTime \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qdatetime.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qcalendar.h \
 		release/moc_predefs.h \
 		C:/Qt/6.8.2/mingw_64/bin/moc.exe
 	C:\Qt\6.8.2\mingw_64\bin\moc.exe $(DEFINES) --include E:/qt/final/QQ/build/Desktop_Qt_6_8_2_MinGW_64_bit-Debug/Server/release/moc_predefs.h -IC:/Qt/6.8.2/mingw_64/mkspecs/win32-g++ -IE:/qt/final/QQ/Server -IC:/Qt/6.8.2/mingw_64/include -IC:/Qt/6.8.2/mingw_64/include/QtWidgets -IC:/Qt/6.8.2/mingw_64/include/QtGui -IC:/Qt/6.8.2/mingw_64/include/QtNetwork -IC:/Qt/6.8.2/mingw_64/include/QtSql -IC:/Qt/6.8.2/mingw_64/include/QtCore -I. -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++ -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/x86_64-w64-mingw32 -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/backward -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed -IC:/Qt/Tools/mingw1310_64/x86_64-w64-mingw32/include ..\..\..\Server\mainwindow.h -o release\moc_mainwindow.cpp
@@ -462,6 +465,10 @@ release/moc_database.cpp: ../../../Server/database.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QList \
 		../../../Server/userinfo.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QDateTime \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qdatetime.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qcalendar.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qlocale.h \
 		release/moc_predefs.h \
 		C:/Qt/6.8.2/mingw_64/bin/moc.exe
 	C:\Qt\6.8.2\mingw_64\bin\moc.exe $(DEFINES) --include E:/qt/final/QQ/build/Desktop_Qt_6_8_2_MinGW_64_bit-Debug/Server/release/moc_predefs.h -IC:/Qt/6.8.2/mingw_64/mkspecs/win32-g++ -IE:/qt/final/QQ/Server -IC:/Qt/6.8.2/mingw_64/include -IC:/Qt/6.8.2/mingw_64/include/QtWidgets -IC:/Qt/6.8.2/mingw_64/include/QtGui -IC:/Qt/6.8.2/mingw_64/include/QtNetwork -IC:/Qt/6.8.2/mingw_64/include/QtSql -IC:/Qt/6.8.2/mingw_64/include/QtCore -I. -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++ -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/x86_64-w64-mingw32 -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include/c++/backward -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include -IC:/Qt/Tools/mingw1310_64/lib/gcc/x86_64-w64-mingw32/13.1.0/include-fixed -IC:/Qt/Tools/mingw1310_64/x86_64-w64-mingw32/include ..\..\..\Server\database.h -o release\moc_database.cpp
@@ -704,6 +711,9 @@ release/main.o: ../../../Server/main.cpp ../../../Server/mainwindow.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QDebug \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
 		../../../Server/userinfo.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QDateTime \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qdatetime.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qcalendar.h \
 		C:/Qt/6.8.2/mingw_64/include/QtWidgets/QApplication \
 		C:/Qt/6.8.2/mingw_64/include/QtWidgets/qapplication.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release\main.o ..\..\..\Server\main.cpp
@@ -923,6 +933,9 @@ release/mainwindow.o: ../../../Server/mainwindow.cpp ../../../Server/mainwindow.
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QDebug \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
 		../../../Server/userinfo.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QDateTime \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qdatetime.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qcalendar.h \
 		ui_mainwindow.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QVariant \
 		C:/Qt/6.8.2/mingw_64/include/QtWidgets/QApplication \
@@ -956,9 +969,6 @@ release/mainwindow.o: ../../../Server/mainwindow.cpp ../../../Server/mainwindow.
 		C:/Qt/6.8.2/mingw_64/include/QtWidgets/qmessagebox.h \
 		C:/Qt/6.8.2/mingw_64/include/QtWidgets/qdialog.h \
 		C:/Qt/6.8.2/mingw_64/include/QtWidgets/qdialogbuttonbox.h \
-		C:/Qt/6.8.2/mingw_64/include/QtCore/QDateTime \
-		C:/Qt/6.8.2/mingw_64/include/QtCore/qdatetime.h \
-		C:/Qt/6.8.2/mingw_64/include/QtCore/qcalendar.h \
 		C:/Qt/6.8.2/mingw_64/include/QtNetwork/QHostAddress
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release\mainwindow.o ..\..\..\Server\mainwindow.cpp
 
@@ -1090,7 +1100,11 @@ release/database.o: ../../../Server/database.cpp ../../../Server/database.h \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QDebug \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QString \
 		C:/Qt/6.8.2/mingw_64/include/QtCore/QList \
-		../../../Server/userinfo.h
+		../../../Server/userinfo.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/QDateTime \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qdatetime.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qcalendar.h \
+		C:/Qt/6.8.2/mingw_64/include/QtCore/qlocale.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o release\database.o ..\..\..\Server\database.cpp
 
 release/moc_mainwindow.o: release/moc_mainwindow.cpp 

@@ -27,18 +27,6 @@
        </size>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
        <item>
         <widget class="QLabel" name="usernamelabel">
          <property name="font">
@@ -53,11 +41,28 @@
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="searchEdit">
-         <property name="placeholderText">
-          <string>搜索好友</string>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLineEdit" name="searchEdit">
+           <property name="placeholderText">
+            <string>搜索好友</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="searchButton">
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>搜索</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
         <widget class="QListView" name="friendListView">
@@ -99,19 +104,6 @@ QListWidget::item:selected {
        </item>
        <item>
         <widget class="QTextBrowser" name="messageBrowser"/>
-       </item>
-       <item>
-        <widget class="QPushButton" name="sendFileButton">
-         <property name="maximumSize">
-          <size>
-           <width>60</width>
-           <height>16777215</height>
-          </size>
-         </property>
-         <property name="text">
-          <string>发送文件</string>
-         </property>
-        </widget>
        </item>
        <item>
         <widget class="QTextEdit" name="messageEdit">

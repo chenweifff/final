@@ -43,6 +43,9 @@ public:
                      const QString& content, const QString& fileName = "",
                      qint64 fileSize = 0);
 
+    // 搜索用户（修改：添加excludeFriends参数，默认为true）
+    QList<UserInfo> searchUsers(int userId, const QString& keyword, bool excludeFriends = true);
+
 private:
     DatabaseManager(QObject* parent = nullptr);
     ~DatabaseManager();

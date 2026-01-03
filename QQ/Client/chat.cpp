@@ -18,8 +18,8 @@
 #include <QDir>
 #include <QSettings>
 
-              // FriendItemDelegate 实现
-              FriendItemDelegate::FriendItemDelegate(QObject *parent)
+// FriendItemDelegate 实现
+FriendItemDelegate::FriendItemDelegate(QObject *parent)
     : QStyledItemDelegate(parent)
 {
 }
@@ -161,9 +161,10 @@ Chat::Chat(QWidget *parent)
 
     // 连接信号槽
     connect(ui->pushButton, &QPushButton::clicked, this, &Chat::onSendButtonClicked);
-    connect(ui->sendFileButton, &QPushButton::clicked, this, &Chat::onSendFileButtonClicked);
+
     connect(ui->friendListView, &QListView::clicked, this, &Chat::onFriendItemClicked);
     connect(ui->searchEdit, &QLineEdit::textChanged, this, &Chat::onSearchTextChanged);
+    connect(ui->searchButton, &QPushButton::clicked, this, &Chat::onSearchButtonClicked);  // 新增：连接搜索按钮
 
     // 连接菜单项
     QAction *logoutAction = new QAction("退出登录", this);
@@ -171,7 +172,7 @@ Chat::Chat(QWidget *parent)
     connect(logoutAction, &QAction::triggered, this, &Chat::onMenuTriggered);
 
     // 加载CSS样式
-    loadCSSStyles();  // 确保调用这个函数
+    loadCSSStyles();
 
     // 初始化网络
     setupNetwork();
@@ -392,25 +393,33 @@ void Chat::setupNetwork()
 void Chat::loadFriendsList(const QList<UserInfo>& friendList)
 {
     friendListModel->clear();
-    m_friendMap.clear(); // 清空好友映射
+    // 注意：在搜索模式下，不清空m_friendMap，因为我们需要用它来显示头像
+    // 只在加载好友列表时更新m_friendMap
+    if (!m_isSearchMode) {
+        m_friendMap.clear(); // 清空好友映射
+    }
 
-    qDebug() << "开始加载好友列表，好友数量：" << friendList.size();
+    qDebug() << "开始加载" << (m_isSearchMode ? "搜索结果" : "好友列表")
+             << "，数量：" << friendList.size();
 
     if (friendList.isEmpty()) {
-        QStandardItem *noFriendsItem = new QStandardItem("暂无好友");
+        QString message = m_isSearchMode ? "没有找到匹配的用户" : "暂无好友";
+        QStandardItem *noFriendsItem = new QStandardItem(message);
         noFriendsItem->setEnabled(false);
         noFriendsItem->setTextAlignment(Qt::AlignCenter);
         friendListModel->appendRow(noFriendsItem);
-        qDebug() << "没有好友，显示'暂无好友'";
+        qDebug() << message;
     } else {
         for (const UserInfo& friendInfo : friendList) {
-            qDebug() << "添加好友到列表：" << friendInfo.nickname
+            qDebug() << "添加用户到列表：" << friendInfo.nickname
                      << " ID:" << friendInfo.userId
                      << " 状态:" << friendInfo.status
                      << " 头像:" << friendInfo.avatarPath;
 
-            // 添加到好友映射
-            m_friendMap.insert(friendInfo.userId, friendInfo);
+            // 如果不是搜索模式，则添加到好友映射
+            if (!m_isSearchMode) {
+                m_friendMap.insert(friendInfo.userId, friendInfo);
+            }
 
             QStandardItem *friendItem = new QStandardItem(friendInfo.nickname);
 
@@ -420,6 +429,7 @@ void Chat::loadFriendsList(const QList<UserInfo>& friendList)
             friendItem->setData(friendInfo.status, Qt::UserRole + 2);  // 在线状态
             friendItem->setData(friendInfo.userId, Qt::UserRole + 3);  // 用户ID
             friendItem->setData(friendInfo.username, Qt::UserRole + 4);  // 用户名
+            friendItem->setData(m_isSearchMode, Qt::UserRole + 5);  // 标记是否为搜索结果
 
             // 设置图标（简化版）
             QPixmap iconPixmap(40, 40);
@@ -443,7 +453,7 @@ void Chat::loadFriendsList(const QList<UserInfo>& friendList)
 
     // 更新视图
     ui->friendListView->update();
-    qDebug() << "好友列表加载完成，好友映射大小：" << m_friendMap.size();
+    qDebug() << (m_isSearchMode ? "搜索结果" : "好友列表") << "加载完成";
 }
 
 void Chat::onFriendItemClicked(const QModelIndex &index)
@@ -461,9 +471,17 @@ void Chat::onFriendItemClicked(const QModelIndex &index)
 
     int friendId = item->data(Qt::UserRole + 3).toInt();  // 获取用户ID
     QString friendName = item->text();
+    bool isSearchResult = item->data(Qt::UserRole + 5).toBool();  // 是否为搜索结果
 
     if (friendId <= 0) {
-        qDebug() << "无效的好友ID";
+        qDebug() << "无效的用户ID";
+        return;
+    }
+
+    // 如果是搜索结果，不能直接聊天，需要先添加好友
+    if (isSearchResult) {
+        QMessageBox::information(this, "提示",
+                                 QString("用户 '%1' 不是您的好友，需要先添加好友才能聊天").arg(friendName));
         return;
     }
 
@@ -681,41 +699,37 @@ void Chat::onSocketReadyRead()
             QString command = parts[0];
 
             if (command == "FRIEND_LIST") {
-                // 处理好友列表响应
-                int friendCount = parts[1].toInt();
-                qDebug() << "好友数量：" << friendCount;
+                // 处理好友列表响应（只在非搜索模式下处理）
+                if (!m_isSearchMode) {
+                    int friendCount = parts[1].toInt();
+                    qDebug() << "好友数量：" << friendCount;
 
-                if (friendCount == 0) {
-                    qDebug() << "没有好友";
-                    loadFriendsList(QList<UserInfo>());
-                    return;
-                }
+                    QList<UserInfo> friendList;
 
-                QList<UserInfo> friendList;
+                    int index = 2;
+                    for (int i = 0; i < friendCount; i++) {
+                        if (index + 4 < parts.size()) {  // 确保有足够的数据
+                            UserInfo friendInfo;
+                            friendInfo.userId = parts[index++].toInt();
+                            friendInfo.username = parts[index++];
+                            friendInfo.nickname = parts[index++];
+                            friendInfo.avatarPath = parts[index++];
+                            friendInfo.status = parts[index++].toInt();
 
-                int index = 2;
-                for (int i = 0; i < friendCount; i++) {
-                    if (index + 4 < parts.size()) {  // 确保有足够的数据
-                        UserInfo friendInfo;
-                        friendInfo.userId = parts[index++].toInt();
-                        friendInfo.username = parts[index++];
-                        friendInfo.nickname = parts[index++];
-                        friendInfo.avatarPath = parts[index++];
-                        friendInfo.status = parts[index++].toInt();
-
-                        friendList.append(friendInfo);
-                        qDebug() << "解析好友信息：" << friendInfo.nickname
-                                 << " ID:" << friendInfo.userId
-                                 << " 头像:" << friendInfo.avatarPath
-                                 << " 状态:" << friendInfo.status;
-                    } else {
-                        qDebug() << "数据不完整，跳过剩余好友";
-                        break;
+                            friendList.append(friendInfo);
+                            qDebug() << "解析好友信息：" << friendInfo.nickname
+                                     << " ID:" << friendInfo.userId
+                                     << " 头像:" << friendInfo.avatarPath
+                                     << " 状态:" << friendInfo.status;
+                        } else {
+                            qDebug() << "数据不完整，跳过剩余好友";
+                            break;
+                        }
                     }
-                }
 
-                // 加载好友列表到界面
-                loadFriendsList(friendList);
+                    // 加载好友列表到界面
+                    loadFriendsList(friendList);
+                }
             } else if (command == "LOGOUT_SUCCESS") {
                 qDebug() << "登出成功";
             } else if (command == "MESSAGES_LIST") {
@@ -756,6 +770,43 @@ void Chat::onSocketReadyRead()
                 addSystemMessage("聊天记录加载完成");
             } else if (command == "MESSAGE_SAVED") {
                 qDebug() << "消息保存成功";
+            } else if (command == "SEARCH_RESULTS") {
+                // 新增：处理搜索结果响应
+                int userCount = parts[1].toInt();
+                qDebug() << "搜索结果数量：" << userCount;
+
+                m_searchResults.clear();
+
+                if (userCount == 0) {
+                    // 没有搜索结果
+                    loadFriendsList(QList<UserInfo>());
+                    addSystemMessage("没有找到匹配的用户");
+                    return;
+                }
+
+                int index = 2;
+                for (int i = 0; i < userCount; i++) {
+                    if (index + 4 < parts.size()) {  // 确保有足够的数据
+                        UserInfo userInfo;
+                        userInfo.userId = parts[index++].toInt();
+                        userInfo.username = parts[index++];
+                        userInfo.nickname = parts[index++];
+                        userInfo.avatarPath = parts[index++];
+                        userInfo.status = parts[index++].toInt();
+
+                        m_searchResults.append(userInfo);
+                        qDebug() << "搜索结果用户：" << userInfo.nickname
+                                 << " ID:" << userInfo.userId
+                                 << " 状态:" << userInfo.status;
+                    } else {
+                        qDebug() << "数据不完整，跳过剩余用户";
+                        break;
+                    }
+                }
+
+                // 加载搜索结果到界面
+                loadFriendsList(m_searchResults);
+                addSystemMessage(QString("找到 %1 个匹配的用户").arg(userCount));
             } else {
                 qDebug() << "未知命令：" << command;
             }
@@ -784,18 +835,50 @@ void Chat::onMenuTriggered()
 
 void Chat::onSearchTextChanged(const QString &text)
 {
-    if (text.isEmpty()) {
-        // 显示所有好友
-        for (int i = 0; i < friendListModel->rowCount(); ++i) {
-            friendListModel->item(i)->setEnabled(true);
-        }
+    // 当搜索框内容改变时，自动清空搜索结果并退出搜索模式
+    if (text.isEmpty() && m_isSearchMode) {
+        m_isSearchMode = false;
+        m_searchResults.clear();
+        requestFriendList();
+        addSystemMessage("已切换回好友列表");
+    }
+}
+
+void Chat::onSearchButtonClicked()
+{
+    QString keyword = ui->searchEdit->text().trimmed();
+
+    if (keyword.isEmpty()) {
+        // 搜索框为空时，切换回好友列表模式
+        m_isSearchMode = false;
+        m_searchResults.clear();
+        requestFriendList();
+        addSystemMessage("已显示好友列表");
+        return;
+    }
+
+    // 发送搜索请求
+    sendSearchRequest(keyword);
+}
+
+void Chat::sendSearchRequest(const QString& keyword)
+{
+    if (m_tcpSocket && m_tcpSocket->state() == QAbstractSocket::ConnectedState) {
+        QString request = QString("SEARCH_USERS|%1|%2\n")
+        .arg(currentUser.userId)
+            .arg(keyword);
+        m_tcpSocket->write(request.toUtf8());
+        m_tcpSocket->flush();
+        qDebug() << "已发送搜索请求：" << request.trimmed();
+
+        // 设置搜索模式
+        m_isSearchMode = true;
+        m_searchResults.clear();
+
+        // 显示系统消息
+        addSystemMessage(QString("正在搜索昵称包含 '%1' 的用户...").arg(keyword));
     } else {
-        // 筛选好友
-        for (int i = 0; i < friendListModel->rowCount(); ++i) {
-            QStandardItem *item = friendListModel->item(i);
-            QString nickname = item->text();
-            bool match = nickname.contains(text, Qt::CaseInsensitive);
-            item->setEnabled(match);
-        }
+        qDebug() << "TCP连接不可用，无法发送搜索请求";
+        addSystemMessage("网络连接异常，无法搜索用户");
     }
 }

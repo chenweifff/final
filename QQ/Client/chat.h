@@ -56,6 +56,7 @@ private slots:
     void onMenuTriggered();
     void onSocketReadyRead();
     void onSearchTextChanged(const QString &text);
+    void onSearchButtonClicked();  // 新增：搜索按钮点击事件
 
 private:
     void setupNetwork();
@@ -66,6 +67,7 @@ private:
     void addMessageToUI(const MessageInfo& message);
     void addSystemMessage(const QString& content);
     void loadCSSStyles();
+    void sendSearchRequest(const QString& keyword);  // 新增：发送搜索请求
 
 private:
     Ui::Chat *ui;
@@ -87,6 +89,10 @@ private:
 
     // 好友映射
     QMap<int, UserInfo> m_friendMap;
+
+    // 新增：搜索相关
+    bool m_isSearchMode = false;  // 是否为搜索模式
+    QList<UserInfo> m_searchResults;  // 搜索结果
 };
 
 #endif // CHAT_H
