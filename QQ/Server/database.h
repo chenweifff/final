@@ -9,7 +9,6 @@
 #include <QString>
 #include <QList>
 
-// 使用统一的UserInfo定义
 #include "userinfo.h"
 
 class DatabaseManager : public QObject
@@ -43,8 +42,14 @@ public:
                      const QString& content, const QString& fileName = "",
                      qint64 fileSize = 0);
 
-    // 搜索用户（修改：添加excludeFriends参数，默认为true）
+    // 搜索用户
     QList<UserInfo> searchUsers(int userId, const QString& keyword, bool excludeFriends = true);
+
+    // 新增：检查是否是好友
+    bool isFriend(int userId1, int userId2);
+
+    // 新增：添加好友
+    bool addFriend(int userId1, int userId2, const QString& remarkName = "");
 
 private:
     DatabaseManager(QObject* parent = nullptr);

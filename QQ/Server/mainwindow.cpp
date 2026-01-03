@@ -4,7 +4,6 @@
 #include <QDateTime>
 #include <QHostAddress>
 
-// ChatServer 实现
 ChatServer::ChatServer(QObject *parent)
     : QTcpServer(parent)
     , m_dbManager(nullptr)
@@ -141,11 +140,17 @@ void ChatServer::onReadyRead()
                 handleSaveMessageRequest(client, senderId, receiverId, contentType, content, fileName, fileSize);
             }
         } else if (command == "SEARCH_USERS" && parts.size() == 3) {
-            // 新增：处理搜索用户请求
+            // 处理搜索用户请求
             int userId = parts[1].toInt();
             QString keyword = parts[2];
             emit logMessage(QString("收到搜索用户请求: 用户ID=%1, 关键词=%2").arg(userId).arg(keyword));
             handleSearchUsersRequest(client, userId, keyword);
+        } else if (command == "ADD_FRIEND" && parts.size() == 3) {
+            // 新增：处理添加好友请求
+            int userId = parts[1].toInt();
+            int friendId = parts[2].toInt();
+            emit logMessage(QString("收到添加好友请求: 用户ID=%1, 好友ID=%2").arg(userId).arg(friendId));
+            handleAddFriendRequest(client, userId, friendId);
         }
     }
 }
@@ -262,7 +267,6 @@ void ChatServer::handleSaveMessageRequest(QTcpSocket* client, int senderId, int 
     }
 }
 
-// 新增：处理搜索用户请求
 void ChatServer::handleSearchUsersRequest(QTcpSocket* client, int userId, const QString& keyword)
 {
     if (!m_dbManager) {
@@ -270,13 +274,37 @@ void ChatServer::handleSearchUsersRequest(QTcpSocket* client, int userId, const 
         return;
     }
 
-    // 修改：第三个参数设置为false，不排除好友
+    // 第三个参数设置为false，不排除好友
     QList<UserInfo> userList = m_dbManager->searchUsers(userId, keyword, false);
     emit logMessage(QString("为用户ID=%1搜索用户，关键词='%2'，找到%3个结果")
                         .arg(userId).arg(keyword).arg(userList.size()));
 
     sendSearchResults(client, userId, userList);
 }
+
+void ChatServer::handleAddFriendRequest(QTcpSocket* client, int userId, int friendId)
+{
+    if (!m_dbManager) {
+        sendAddFriendResult(client, userId, friendId, false, "数据库未连接");
+        return;
+    }
+
+    // 检查是否已经是好友
+    if (m_dbManager->isFriend(userId, friendId)) {
+        sendAddFriendResult(client, userId, friendId, false, "已经是好友关系");
+        return;
+    }
+
+    // 添加好友
+    if (m_dbManager->addFriend(userId, friendId)) {
+        sendAddFriendResult(client, userId, friendId, true, "好友添加成功");
+        emit logMessage(QString("用户ID=%1 成功添加好友 ID=%2").arg(userId).arg(friendId));
+    } else {
+        sendAddFriendResult(client, userId, friendId, false, "好友添加失败");
+        emit logMessage(QString("用户ID=%1 添加好友 ID=%2 失败").arg(userId).arg(friendId));
+    }
+}
+
 void ChatServer::sendFriendList(QTcpSocket* client, int userId, const QList<UserInfo>& friendList)
 {
     QString response = QString("FRIEND_LIST|%1").arg(friendList.size());
@@ -314,7 +342,6 @@ void ChatServer::sendMessageList(QTcpSocket* client, int user1Id, int user2Id, c
     emit logMessage(QString("已向用户ID=%1发送聊天记录，共%2条消息").arg(user1Id).arg(messageList.size()));
 }
 
-// 新增：发送搜索结果
 void ChatServer::sendSearchResults(QTcpSocket* client, int userId, const QList<UserInfo>& userList)
 {
     QString response = QString("SEARCH_RESULTS|%1").arg(userList.size());
@@ -330,6 +357,16 @@ void ChatServer::sendSearchResults(QTcpSocket* client, int userId, const QList<U
 
     sendResponse(client, response);
     emit logMessage(QString("已向用户ID=%1发送搜索结果，共%2个用户").arg(userId).arg(userList.size()));
+}
+
+void ChatServer::sendAddFriendResult(QTcpSocket* client, int userId, int friendId, bool success, const QString& message)
+{
+    QString response = QString("ADD_FRIEND_RESULT|%1|%2|%3|%4")
+    .arg(userId)
+        .arg(friendId)
+        .arg(success ? "SUCCESS" : "FAIL")
+        .arg(message);
+    sendResponse(client, response);
 }
 
 void ChatServer::sendResponse(QTcpSocket* client, const QString& response)

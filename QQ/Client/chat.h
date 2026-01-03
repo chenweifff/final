@@ -19,7 +19,6 @@ namespace Ui {
 class Chat;
 }
 
-// 自定义委托，用于在QListView中显示头像和昵称
 class FriendItemDelegate : public QStyledItemDelegate
 {
     Q_OBJECT
@@ -27,6 +26,16 @@ public:
     explicit FriendItemDelegate(QObject *parent = nullptr);
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
+
+    // 新增：用于处理按钮点击
+    bool editorEvent(QEvent *event, QAbstractItemModel *model,
+                     const QStyleOptionViewItem &option, const QModelIndex &index) override;
+
+signals:
+    void addFriendClicked(int friendId);  // 新增：添加好友信号
+
+private:
+    mutable QRect m_addButtonRect;  // 用于记录添加按钮的位置
 };
 
 class Chat : public QMainWindow
@@ -56,7 +65,8 @@ private slots:
     void onMenuTriggered();
     void onSocketReadyRead();
     void onSearchTextChanged(const QString &text);
-    void onSearchButtonClicked();  // 新增：搜索按钮点击事件
+    void onSearchButtonClicked();
+    void onAddFriendClicked(int friendId);  // 新增：处理添加好友点击
 
 private:
     void setupNetwork();
@@ -67,7 +77,9 @@ private:
     void addMessageToUI(const MessageInfo& message);
     void addSystemMessage(const QString& content);
     void loadCSSStyles();
-    void sendSearchRequest(const QString& keyword);  // 新增：发送搜索请求
+    void sendSearchRequest(const QString& keyword);
+    void sendAddFriendRequest(int friendId);  // 新增：发送添加好友请求
+    void updateFriendList();  // 新增：更新好友列表显示
 
 private:
     Ui::Chat *ui;
@@ -75,24 +87,21 @@ private:
     int currentFriendId = -1;
     QString currentFriendName;
 
-    // Model/View
     QStandardItemModel *friendListModel;
     FriendItemDelegate *friendItemDelegate;
 
-    // 网络相关
     QTcpSocket *m_tcpSocket = nullptr;
     QUdpSocket *udpSocket = nullptr;
     QTcpServer *tcpServer = nullptr;
 
-    // 聊天记录
     QList<MessageInfo> chatHistory;
-
-    // 好友映射
     QMap<int, UserInfo> m_friendMap;
 
-    // 新增：搜索相关
-    bool m_isSearchMode = false;  // 是否为搜索模式
-    QList<UserInfo> m_searchResults;  // 搜索结果
+    bool m_isSearchMode = false;
+    QList<UserInfo> m_searchResults;
+
+    // 新增：存储搜索结果的友好关系状态
+    QMap<int, bool> m_searchResultFriendStatus;  // key: userId, value: 是否是好友
 };
 
 #endif // CHAT_H

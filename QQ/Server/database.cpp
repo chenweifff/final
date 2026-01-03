@@ -315,3 +315,62 @@ QList<UserInfo> DatabaseManager::searchUsers(int userId, const QString& keyword,
     qDebug() << "Total found:" << count << "users";
     return userList;
 }
+
+// 新增：检查是否是好友
+bool DatabaseManager::isFriend(int userId1, int userId2)
+{
+    if (!m_database.isOpen()) {
+        return false;
+    }
+
+    QSqlQuery query;
+    query.prepare(
+        "SELECT COUNT(*) FROM friendships "
+        "WHERE (user_id1 = :userId1 AND user_id2 = :userId2) "
+        "OR (user_id1 = :userId2 AND user_id2 = :userId1)"
+        );
+    query.bindValue(":userId1", userId1);
+    query.bindValue(":userId2", userId2);
+
+    if (!query.exec() || !query.next()) {
+        qDebug() << "Check friendship failed:" << query.lastError().text();
+        return false;
+    }
+
+    return query.value(0).toInt() > 0;
+}
+
+// 新增：添加好友
+bool DatabaseManager::addFriend(int userId1, int userId2, const QString& remarkName)
+{
+    if (!m_database.isOpen()) {
+        return false;
+    }
+
+    // 先检查是否已经是好友
+    if (isFriend(userId1, userId2)) {
+        qDebug() << "Users are already friends";
+        return false;
+    }
+
+    // 确保 user_id1 < user_id2 以避免重复
+    int smallerId = qMin(userId1, userId2);
+    int largerId = qMax(userId1, userId2);
+
+    QSqlQuery query;
+    query.prepare(
+        "INSERT INTO friendships (user_id1, user_id2, remark_name, created_at) "
+        "VALUES (:userId1, :userId2, :remarkName, datetime('now'))"
+        );
+    query.bindValue(":userId1", smallerId);
+    query.bindValue(":userId2", largerId);
+    query.bindValue(":remarkName", remarkName);
+
+    if (!query.exec()) {
+        qDebug() << "Add friend failed:" << query.lastError().text();
+        return false;
+    }
+
+    qDebug() << "Friendship added between user" << smallerId << "and user" << largerId;
+    return true;
+}

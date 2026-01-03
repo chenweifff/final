@@ -17,6 +17,7 @@
 #include <QTextDocument>
 #include <QDir>
 #include <QSettings>
+#include <QMouseEvent>
 
 // FriendItemDelegate 实现
 FriendItemDelegate::FriendItemDelegate(QObject *parent)
@@ -42,6 +43,8 @@ void FriendItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
     QString avatarPath = index.data(Qt::UserRole + 1).toString();  // 头像路径
     int status = index.data(Qt::UserRole + 2).toInt();  // 在线状态
     int userId = index.data(Qt::UserRole + 3).toInt();  // 用户ID
+    bool isSearchResult = index.data(Qt::UserRole + 5).toBool();  // 是否为搜索结果
+    bool isFriend = index.data(Qt::UserRole + 6).toBool();  // 新增：好友状态
 
     // 绘制头像区域（缩小为36x36）
     QRect avatarRect = option.rect;
@@ -95,15 +98,39 @@ void FriendItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &op
     painter->setFont(font);
     painter->drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, nickname);
 
-    // 绘制状态文本
-    if (status == 1) {
-        painter->setPen(QColor(0, 150, 0));
-        painter->drawText(textRect.right() - 50, textRect.top(), 50, textRect.height(),
-                          Qt::AlignVCenter | Qt::AlignRight, "在线");
+    // 如果是搜索结果且不是好友，显示添加按钮
+    if (isSearchResult && !isFriend) {
+        // 绘制添加好友按钮
+        QRect buttonRect = option.rect;
+        buttonRect.setWidth(60);
+        buttonRect.setHeight(24);
+        buttonRect.moveRight(option.rect.right() - 10);
+        buttonRect.moveTop(option.rect.top() + (option.rect.height() - buttonRect.height()) / 2);
+
+        m_addButtonRect = buttonRect;  // 存储按钮位置用于点击检测
+
+        // 绘制按钮背景
+        painter->setBrush(QColor(0, 123, 255));
+        painter->setPen(Qt::NoPen);
+        painter->drawRoundedRect(buttonRect, 4, 4);
+
+        // 绘制按钮文字
+        painter->setPen(Qt::white);
+        painter->setFont(QFont("Arial", 9));
+        painter->drawText(buttonRect, Qt::AlignCenter, "添加好友");
+
+        // 不显示状态文本
     } else {
-        painter->setPen(QColor(150, 150, 150));
-        painter->drawText(textRect.right() - 50, textRect.top(), 50, textRect.height(),
-                          Qt::AlignVCenter | Qt::AlignRight, "离线");
+        // 绘制状态文本
+        if (status == 1) {
+            painter->setPen(QColor(0, 150, 0));
+            painter->drawText(textRect.right() - 50, textRect.top(), 50, textRect.height(),
+                              Qt::AlignVCenter | Qt::AlignRight, "在线");
+        } else {
+            painter->setPen(QColor(150, 150, 150));
+            painter->drawText(textRect.right() - 50, textRect.top(), 50, textRect.height(),
+                              Qt::AlignVCenter | Qt::AlignRight, "离线");
+        }
     }
 
     painter->restore();
@@ -114,6 +141,28 @@ QSize FriendItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QMo
     Q_UNUSED(option);
     Q_UNUSED(index);
     return QSize(200, 60);  // 固定高度为60
+}
+
+bool FriendItemDelegate::editorEvent(QEvent *event, QAbstractItemModel *model,
+                                     const QStyleOptionViewItem &option, const QModelIndex &index)
+{
+    if (event->type() == QEvent::MouseButtonPress) {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+
+        // 检查是否点击了添加好友按钮
+        if (m_addButtonRect.contains(mouseEvent->pos())) {
+            bool isSearchResult = index.data(Qt::UserRole + 5).toBool();
+            bool isFriend = index.data(Qt::UserRole + 6).toBool();
+            int userId = index.data(Qt::UserRole + 3).toInt();
+
+            if (isSearchResult && !isFriend && userId > 0) {
+                emit addFriendClicked(userId);
+                return true;
+            }
+        }
+    }
+
+    return QStyledItemDelegate::editorEvent(event, model, option, index);
 }
 
 // Chat 实现
@@ -170,6 +219,10 @@ Chat::Chat(QWidget *parent)
     QAction *logoutAction = new QAction("退出登录", this);
     ui->menu->addAction(logoutAction);
     connect(logoutAction, &QAction::triggered, this, &Chat::onMenuTriggered);
+
+    // 新增：连接添加好友信号
+    connect(friendItemDelegate, &FriendItemDelegate::addFriendClicked,
+            this, &Chat::onAddFriendClicked);
 
     // 加载CSS样式
     loadCSSStyles();
@@ -431,6 +484,15 @@ void Chat::loadFriendsList(const QList<UserInfo>& friendList)
             friendItem->setData(friendInfo.username, Qt::UserRole + 4);  // 用户名
             friendItem->setData(m_isSearchMode, Qt::UserRole + 5);  // 标记是否为搜索结果
 
+            // 新增：设置好友状态
+            bool isFriend = m_friendMap.contains(friendInfo.userId);
+            friendItem->setData(isFriend, Qt::UserRole + 6);  // 好友状态
+
+            // 如果是搜索模式，保存好友状态
+            if (m_isSearchMode) {
+                m_searchResultFriendStatus[friendInfo.userId] = isFriend;
+            }
+
             // 设置图标（简化版）
             QPixmap iconPixmap(40, 40);
             if (!friendInfo.avatarPath.isEmpty() && QFile::exists(friendInfo.avatarPath)) {
@@ -472,16 +534,17 @@ void Chat::onFriendItemClicked(const QModelIndex &index)
     int friendId = item->data(Qt::UserRole + 3).toInt();  // 获取用户ID
     QString friendName = item->text();
     bool isSearchResult = item->data(Qt::UserRole + 5).toBool();  // 是否为搜索结果
+    bool isFriend = item->data(Qt::UserRole + 6).toBool();  // 新增：好友状态
 
     if (friendId <= 0) {
         qDebug() << "无效的用户ID";
         return;
     }
 
-    // 如果是搜索结果，不能直接聊天，需要先添加好友
-    if (isSearchResult) {
+    // 如果是搜索结果且不是好友，显示提示
+    if (isSearchResult && !isFriend) {
         QMessageBox::information(this, "提示",
-                                 QString("用户 '%1' 不是您的好友，需要先添加好友才能聊天").arg(friendName));
+                                 QString("用户 '%1' 不是您的好友，点击'添加好友'按钮添加好友").arg(friendName));
         return;
     }
 
@@ -776,6 +839,7 @@ void Chat::onSocketReadyRead()
                 qDebug() << "搜索结果数量：" << userCount;
 
                 m_searchResults.clear();
+                m_searchResultFriendStatus.clear();
 
                 if (userCount == 0) {
                     // 没有搜索结果
@@ -807,6 +871,34 @@ void Chat::onSocketReadyRead()
                 // 加载搜索结果到界面
                 loadFriendsList(m_searchResults);
                 addSystemMessage(QString("找到 %1 个匹配的用户").arg(userCount));
+            } else if (command == "ADD_FRIEND_RESULT") {
+                // 新增：处理添加好友结果
+                if (parts.size() >= 4) {
+                    int userId = parts[1].toInt();
+                    int friendId = parts[2].toInt();
+                    QString result = parts[3];
+                    QString message = parts.size() > 4 ? parts[4] : "";
+
+                    if (result == "SUCCESS") {
+                        QMessageBox::information(this, "添加好友",
+                                                 QString("成功添加好友！\n用户ID: %1").arg(friendId));
+
+                        // 更新好友状态
+                        m_searchResultFriendStatus[friendId] = true;
+
+                        // 如果是当前搜索模式，刷新显示
+                        if (m_isSearchMode) {
+                            updateFriendList();
+                        }
+
+                        // 重新请求好友列表，更新m_friendMap
+                        requestFriendList();
+
+                    } else {
+                        QMessageBox::warning(this, "添加好友失败",
+                                             QString("添加好友失败: %1").arg(message));
+                    }
+                }
             } else {
                 qDebug() << "未知命令：" << command;
             }
@@ -839,6 +931,7 @@ void Chat::onSearchTextChanged(const QString &text)
     if (text.isEmpty() && m_isSearchMode) {
         m_isSearchMode = false;
         m_searchResults.clear();
+        m_searchResultFriendStatus.clear();
         requestFriendList();
         addSystemMessage("已切换回好友列表");
     }
@@ -852,6 +945,7 @@ void Chat::onSearchButtonClicked()
         // 搜索框为空时，切换回好友列表模式
         m_isSearchMode = false;
         m_searchResults.clear();
+        m_searchResultFriendStatus.clear();
         requestFriendList();
         addSystemMessage("已显示好友列表");
         return;
@@ -874,11 +968,68 @@ void Chat::sendSearchRequest(const QString& keyword)
         // 设置搜索模式
         m_isSearchMode = true;
         m_searchResults.clear();
+        m_searchResultFriendStatus.clear();
 
         // 显示系统消息
         addSystemMessage(QString("正在搜索昵称包含 '%1' 的用户...").arg(keyword));
     } else {
         qDebug() << "TCP连接不可用，无法发送搜索请求";
         addSystemMessage("网络连接异常，无法搜索用户");
+    }
+}
+
+// 新增：处理添加好友点击
+void Chat::onAddFriendClicked(int friendId)
+{
+    if (friendId <= 0 || friendId == currentUser.userId) {
+        QMessageBox::warning(this, "错误", "无法添加此用户为好友");
+        return;
+    }
+
+    // 确认是否要添加好友
+    QString friendName;
+    for (const auto& user : m_searchResults) {
+        if (user.userId == friendId) {
+            friendName = user.nickname;
+            break;
+        }
+    }
+
+    if (friendName.isEmpty()) {
+        friendName = QString("用户ID: %1").arg(friendId);
+    }
+
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "确认添加好友",
+                                  QString("确定要添加 '%1' 为好友吗？").arg(friendName),
+                                  QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        sendAddFriendRequest(friendId);
+    }
+}
+
+// 新增：发送添加好友请求
+void Chat::sendAddFriendRequest(int friendId)
+{
+    if (m_tcpSocket && m_tcpSocket->state() == QAbstractSocket::ConnectedState) {
+        QString request = QString("ADD_FRIEND|%1|%2\n")
+        .arg(currentUser.userId)
+            .arg(friendId);
+        m_tcpSocket->write(request.toUtf8());
+        m_tcpSocket->flush();
+        qDebug() << "已发送添加好友请求：" << request.trimmed();
+
+        addSystemMessage(QString("正在发送好友请求给用户ID: %1...").arg(friendId));
+    } else {
+        QMessageBox::warning(this, "网络错误", "无法连接到服务器");
+    }
+}
+
+// 新增：更新好友列表显示
+void Chat::updateFriendList()
+{
+    if (m_isSearchMode && !m_searchResults.isEmpty()) {
+        loadFriendsList(m_searchResults);
     }
 }
